@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watch GPX Navigator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; background: #1a1a2e; font-family: -apple-system, sans-serif;
+    padding: 16px; gap: 16px;
+  }
+  .bezel {
+    width: 218px; height: 218px; border-radius: 109px;
+    background: linear-gradient(145deg, #2a2a3e, #0a0a1e);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 2px solid #333;
+  }
+  .watch {
+    width: 198px; height: 198px; border-radius: 99px;
+    overflow: hidden; position: relative; background: #222;
+    border: 2px solid #111; cursor: grab; touch-action: none;
+    transition: border-color 0.2s;
+  }
+  .watch.haptic { border-color: #FF4500; }
+  .watch.sleeping { cursor: pointer; }
+  .watch img {
+    position: absolute; image-rendering: auto;
+    filter: saturate(0.5) contrast(0.9) brightness(1.1);
+    user-select: none; -webkit-user-drag: none;
+  }
+  .track-svg, .pos-svg {
+    position: absolute; top: 0; left: 0; width: 198px; height: 198px; pointer-events: none;
+  }
+  .nav-banner {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 80%, transparent 100%);
+    padding: 6px 10px 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .nav-icon { font-size: 20px; }
+  .nav-text { color: #fff; font-size: 12px; font-weight: 600; line-height: 1.2; }
+  .nav-dist { color: #aaa; font-size: 10px; }
+  .zoom-ind {
+    position: absolute; bottom: 6px; right: 10px; z-index: 10;
+    color: rgba(255,255,255,0.6); font-size: 9px;
+    background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 4px;
+  }
+  .cache-ind {
+    position: absolute; bottom: 6px; left: 10px; z-index: 10;
+    color: rgba(255,255,255,0.4); font-size: 9px;
+    background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 4px;
+  }
+  .inner-shadow {
+    position: absolute; top: -2px; left: -2px; width: 202px; height: 202px;
+    border-radius: 50%; box-shadow: inset 0 0 20px 10px #1a1a2e;
+    pointer-events: none; z-index: 20;
+  }
+  .sleep-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 30; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.3s;
+  }
+  .sleep-overlay .time {
+    color: #fff; font-size: 36px; font-weight: 200; letter-spacing: 2px;
+  }
+  .sleep-overlay .nav-hint {
+    color: #FF4500; font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sleep-overlay .tap-hint {
+    color: #555; font-size: 10px; margin-top: 12px;
+  }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    color: #fff; border: none; border-radius: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer; min-width: 36px;
+  }
+  .hint { color: #777; font-size: 11px; text-align: center; max-width: 320px; line-height: 1.4; }
+  .legend { display: flex; gap: 14px; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 4px; color: #999; font-size: 11px; }
+  .legend-line { width: 18px; height: 3px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="bezel">
+  <div class="watch" id="watch">
+    <div id="tiles"></div>
+    <svg class="track-svg" id="trackSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <svg class="pos-svg" id="posSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="nav-banner" id="navBanner">
+      <span class="nav-icon" id="navIcon">🏁</span>
+      <div>
+        <div class="nav-text" id="navText">Start: Alexanderplatz</div>
+        <div class="nav-dist" id="navDist"></div>
+      </div>
+    </div>
+    <div class="zoom-ind" id="zoomInd">Z15</div>
+    <div class="cache-ind" id="cacheInd">Cache: 0</div>
+    <div class="inner-shadow"></div>
+    <div class="sleep-overlay" id="sleepOverlay">
+      <div class="time" id="clockTime">12:00</div>
+      <div class="nav-hint" id="sleepNav">🏁 Start: Alexanderplatz</div>
+      <div class="tap-hint">Antippen für Karte</div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-line" style="background:#3498db"></div>Track</div>
+  <div class="legend-item"><div class="legend-line" style="background:#e74c3c"></div>Gelaufen</div>
+  <div class="legend-item"><div class="legend-line" style="background:transparent; width:10px; height:10px; border-radius:50%; border:2px solid #007AFF"></div>Position</div>
+</div>
+
+<div class="controls">
+  <button class="btn" id="btnSim" style="background:#27ae60" onclick="toggleSim()">▶ Simulation</button>
+  <button class="btn" style="background:#2980b9" onclick="recenter()">📍 Zentrieren</button>
+  <button class="btn" style="background:#555" onclick="changeZoom(1)">+</button>
+  <button class="btn" style="background:#555" onclick="changeZoom(-1)">−</button>
+</div>
+
+<div class="hint">
+  Display schläft nach 3s ein · Antippen weckt auf · Bei Abbiegehinweis wacht es automatisch auf<br>
+  Scroll = Zoom · Drag = Pan
+</div>
+
+<script>
+const TILE_SIZE = 256, W = 198, HALF = W / 2, MIN_ZOOM = 10, MAX_ZOOM = 17;
+const SLEEP_TIMEOUT = 3000;
+
+const GPX = [
+  [52.5219,13.4133],[52.5213,13.4100],[52.5205,13.4055],
+  [52.5200,13.4010],[52.5196,13.3965],[52.5191,13.3920],
+  [52.5185,13.3880],[52.5182,13.3840],[52.5180,13.3800],
+  [52.5178,13.3760],[52.5175,13.3720],[52.5172,13.3690],
+  [52.5168,13.3650],[52.5163,13.3610],[52.5160,13.3580],
+  [52.5158,13.3550],[52.5155,13.3510],[52.5153,13.3480],
+  [52.5160,13.3460],[52.5163,13.3440],[52.5168,13.3410],
+  [52.5172,13.3390],
+];
+
+const TURNS = [
+  {idx:0,text:"Start: Alexanderplatz",icon:"🏁"},
+  {idx:3,text:"Geradeaus auf Karl-Liebknecht",icon:"↑"},
+  {idx:7,text:"Links auf Spandauer Str.",icon:"↰"},
+  {idx:10,text:"Rechts auf Unter den Linden",icon:"↱"},
+  {idx:15,text:"Geradeaus weiter",icon:"↑"},
+  {idx:19,text:"Ziel: Brandenburger Tor",icon:"🏁"},
+];
+
+let zoom = 15, simIdx = 0, running = false, followMode = true;
+let offsetX = 0, offsetY = 0, dragStart = null, interval = null;
+let sleeping = false, sleepTimer = null;
+let walkedPath = [];
+
+// --- Tile Cache ---
+const tileCache = new Map();
+const MAX_CACHE = 150;
+
+function getTileKey(z, x, y) { return `${z}/${x}/${y}`; }
+
+function loadTile(z, x, y) {
+  const key = getTileKey(z, x, y);
+  if (tileCache.has(key)) {
+    const entry = tileCache.get(key);
+    entry.lastUsed = Date.now();
+    return entry.img;
+  }
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+  img.onload = () => render();
+  img.onerror = () => { img._failed = true; };
+  tileCache.set(key, { img, lastUsed: Date.now() });
+  if (tileCache.size > MAX_CACHE) evictCache();
+  updateCacheInd();
+  return img;
+}
+
+function evictCache() {
+  const entries = [...tileCache.entries()].sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+  const toRemove = entries.slice(0, Math.floor(MAX_CACHE * 0.3));
+  toRemove.forEach(([k]) => tileCache.delete(k));
+  updateCacheInd();
+}
+
+function updateCacheInd() {
+  $("cacheInd").textContent = "Cache: " + tileCache.size;
+}
+
+// --- Helpers ---
+const $ = id => document.getElementById(id);
+const watchEl = $("watch");
+
+function lon2tile(lon, z) { return ((lon + 180) / 360) * (1 << z); }
+function lat2tile(lat, z) {
+  const r = lat * Math.PI / 180;
+  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * (1 << z);
+}
+function latLonPx(lat, lon, z) {
+  return { x: lon2tile(lon, z) * TILE_SIZE, y: lat2tile(lat, z) * TILE_SIZE };
+}
+function haversine(a, b) {
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b[0]-a[0])*r, dLon = (b[1]-a[1])*r;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+
+function currentInstruction() {
+  return [...TURNS].reverse().find(t => t.idx <= simIdx) || TURNS[0];
+}
+
+// --- Sleep / Wake ---
+function goToSleep() {
+  sleeping = true;
+  $("sleepOverlay").style.opacity = "1";
+  $("sleepOverlay").style.pointerEvents = "auto";
+  watchEl.classList.add("sleeping");
+  updateClock();
+}
+
+function wakeUp(fromHaptic) {
+  sleeping = false;
+  $("sleepOverlay").style.opacity = "0";
+  $("sleepOverlay").style.pointerEvents = "none";
+  watchEl.classList.remove("sleeping");
+  resetSleepTimer();
+  if (!fromHaptic) render();
+}
+
+function resetSleepTimer() {
+  clearTimeout(sleepTimer);
+  if (running) {
+    sleepTimer = setTimeout(goToSleep, SLEEP_TIMEOUT);
+  }
+}
+
+function updateClock() {
+  const now = new Date();
+  $("clockTime").textContent =
+    now.getHours().toString().padStart(2,"0") + ":" +
+    now.getMinutes().toString().padStart(2,"0");
+  const instr = currentInstruction();
+  $("sleepNav").textContent = instr.icon + " " + instr.text;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+$("sleepOverlay").addEventListener("click", () => wakeUp(false));
+
+// --- Rendering ---
+function getCenter() {
+  const pos = GPX[simIdx];
+  const c = latLonPx(pos[0], pos[1], zoom);
+  return { x: c.x + (followMode ? 0 : offsetX), y: c.y + (followMode ? 0 : offsetY) };
+}
+
+function render() {
+  if (sleeping) return;
+  const c = getCenter();
+  renderTiles(c);
+  renderTracks(c);
+  renderPosition(c);
+  $("zoomInd").textContent = "Z" + zoom;
+  const instr = currentInstruction();
+  $("navIcon").textContent = instr.icon;
+  $("navText").textContent = instr.text;
+  const d = simIdx < GPX.length - 1 ? Math.round(haversine(GPX[simIdx], GPX[simIdx+1])) : 0;
+  $("navDist").textContent = d + "m zum nächsten Punkt";
+}
+
+function renderTiles(c) {
+  const container = $("tiles");
+  container.innerHTML = "";
+  const needed = Math.ceil(W / TILE_SIZE) + 2;
+  const half = Math.floor(needed / 2);
+  const ctX = Math.floor(c.x / TILE_SIZE);
+  const ctY = Math.floor(c.y / TILE_SIZE);
+  const oX = HALF - (c.x - ctX * TILE_SIZE);
+  const oY = HALF - (c.y - ctY * TILE_SIZE);
+  const maxT = 1 << zoom;
+
+  for (let dx = -half; dx <= half; dx++) {
+    for (let dy = -half; dy <= half; dy++) {
+      const ty = ctY + dy;
+      if (ty < 0 || ty >= maxT) continue;
+      const tx = ((ctX + dx) % maxT + maxT) % maxT;
+      const px = oX + dx * TILE_SIZE;
+      const py = oY + dy * TILE_SIZE;
+      if (px + TILE_SIZE < 0 || px > W || py + TILE_SIZE < 0 || py > W) continue;
+
+      const cached = loadTile(zoom, tx, ty);
+      if (cached && cached.complete && !cached._failed) {
+        const img = document.createElement("img");
+        img.src = cached.src;
+        img.width = TILE_SIZE; img.height = TILE_SIZE;
+        img.style.left = px + "px"; img.style.top = py + "px";
+        container.appendChild(img);
+      }
+    }
+  }
+}
+
+function renderTracks(c) {
+  const svg = $("trackSvg");
+  // Full track in blue
+  const trackPts = GPX.map(([lat, lon]) => {
+    const p = latLonPx(lat, lon, zoom);
+    return { x: p.x - c.x + HALF, y: p.y - c.y + HALF };
+  });
+  const trackD = trackPts.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ");
+
+  // Walked path in red
+  const walked = walkedPath.map(([lat, lon]) => {
+    const p = latLonPx(lat, lon, zoom);
+    return { x: p.x - c.x + HALF, y: p.y - c.y + HALF };
+  });
+  const walkedD = walked.length > 1
+    ? walked.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ")
+    : "";
+
+  svg.innerHTML = `
+    <path d="${trackD}" fill="none" stroke="#3498db" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    <path d="${trackD}" fill="none" stroke="#5dade2" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+    ${walkedD ? `
+    <path d="${walkedD}" fill="none" stroke="#e74c3c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+    <path d="${walkedD}" fill="none" stroke="#f39c12" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+    ` : ""}
+  `;
+}
+
+function renderPosition(c) {
+  const pos = GPX[simIdx];
+  const p = latLonPx(pos[0], pos[1], zoom);
+  const x = p.x - c.x + HALF, y = p.y - c.y + HALF;
+  $("posSvg").innerHTML = `
+    <circle cx="${x}" cy="${y}" r="10" fill="rgba(0,120,255,0.2)"/>
+    <circle cx="${x}" cy="${y}" r="5" fill="#007AFF" stroke="#fff" stroke-width="2"/>
+  `;
+}
+
+// --- Simulation ---
+function toggleSim() {
+  running = !running;
+  const btn = $("btnSim");
+  if (running) {
+    btn.textContent = "⏸ Stop"; btn.style.background = "#c0392b";
+    walkedPath = [GPX[simIdx]];
+    resetSleepTimer();
+    interval = setInterval(() => {
+      const prevIdx = simIdx;
+      simIdx = (simIdx + 1) % GPX.length;
+      if (simIdx === 0) walkedPath = [];
+      walkedPath.push(GPX[simIdx]);
+      followMode = true;
+
+      const instr = currentInstruction();
+      if (instr && instr.idx === simIdx) {
+        // Wake up on turn instruction
+        wakeUp(true);
+        watchEl.classList.add("haptic");
+        setTimeout(() => watchEl.classList.remove("haptic"), 400);
+        resetSleepTimer();
+      }
+      render();
+    }, 1200);
+  } else {
+    btn.textContent = "▶ Simulation"; btn.style.background = "#27ae60";
+    clearInterval(interval);
+    clearTimeout(sleepTimer);
+    wakeUp(false);
+  }
+}
+
+function recenter() { followMode = true; offsetX = 0; offsetY = 0; render(); }
+function changeZoom(d) {
+  zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom + d));
+  resetSleepTimer();
+  render();
+}
+
+// --- Interactions ---
+watchEl.addEventListener("wheel", e => {
+  if (sleeping) { wakeUp(false); return; }
+  e.preventDefault(); changeZoom(e.deltaY < 0 ? 1 : -1);
+}, { passive: false });
+
+watchEl.addEventListener("pointerdown", e => {
+  if (sleeping) return;
+  dragStart = { x: e.clientX, y: e.clientY, ox: offsetX, oy: offsetY };
+  followMode = false;
+  resetSleepTimer();
+});
+window.addEventListener("pointermove", e => {
+  if (!dragStart) return;
+  offsetX = dragStart.ox - (e.clientX - dragStart.x);
+  offsetY = dragStart.oy - (e.clientY - dragStart.y);
+  render();
+});
+window.addEventListener("pointerup", () => { dragStart = null; });
+
+render();
+</script>
+</body>
+</html>
