@@ -90,12 +90,24 @@ function App() {
   const [haptic, setHaptic] = useState(false)
   const [renderKey, setRenderKey] = useState(0)
 
+  // Simulation state for continuous movement
+  const [segmentProgress, setSegmentProgress] = useState(0) // 0-1 within current segment
+  const [lateralOffset, setLateralOffset] = useState(0) // meters perpendicular to track
+  const [currentPosition, setCurrentPosition] = useState<[number, number]>(GPX[0])
+
   // Refs
   const watchRef = useRef<HTMLDivElement>(null)
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
   const sleepTimerRef = useRef<number | null>(null)
   const intervalRef = useRef<number | null>(null)
   const tileCacheRef = useRef<Map<string, TileEntry>>(new Map())
+
+  // Simulation state refs (for smooth updates)
+  const simStateRef = useRef({
+    segmentIdx: 0,
+    progress: 0,
+    lateralOffset: 0
+  })
 
   // Tile cache functions
   const getTileKey = (z: number, x: number, y: number) => `${z}/${x}/${y}`
@@ -155,12 +167,54 @@ function App() {
     }
   }, [running, goToSleep])
 
+  // Calculate position with deviation
+  const calculateDeviatedPosition = useCallback((
+    segmentIdx: number,
+    progress: number,
+    lateralOffsetMeters: number
+  ): [number, number] => {
+    if (segmentIdx >= GPX.length - 1) {
+      return GPX[GPX.length - 1]
+    }
+
+    const start = GPX[segmentIdx]
+    const end = GPX[segmentIdx + 1]
+
+    // Interpolate along the segment
+    const lat = start[0] + (end[0] - start[0]) * progress
+    const lon = start[1] + (end[1] - start[1]) * progress
+
+    // Calculate perpendicular offset
+    // Direction vector
+    const dLat = end[0] - start[0]
+    const dLon = end[1] - start[1]
+    const length = Math.sqrt(dLat * dLat + dLon * dLon)
+
+    if (length > 0) {
+      // Perpendicular vector (rotated 90 degrees)
+      const perpLat = -dLon / length
+      const perpLon = dLat / length
+
+      // Convert offset from meters to degrees (approximate)
+      // At this latitude (Berlin), 1 degree lat ≈ 111km, 1 degree lon ≈ 71km
+      const metersPerDegreeLat = 111000
+      const metersPerDegreeLon = 71000
+
+      const offsetLat = (perpLat * lateralOffsetMeters) / metersPerDegreeLat
+      const offsetLon = (perpLon * lateralOffsetMeters) / metersPerDegreeLon
+
+      return [lat + offsetLat, lon + offsetLon]
+    }
+
+    return [lat, lon]
+  }, [])
+
   // Get center point
   const getCenter = useCallback((): Point => {
-    const pos = GPX[simIdx]
+    const pos = currentPosition
     const c = latLonPx(pos[0], pos[1], zoom)
     return { x: c.x + (followMode ? 0 : offsetX), y: c.y + (followMode ? 0 : offsetY) }
-  }, [simIdx, zoom, followMode, offsetX, offsetY])
+  }, [currentPosition, zoom, followMode, offsetX, offsetY])
 
   // Render tiles
   const renderTiles = useCallback(() => {
@@ -238,7 +292,7 @@ function App() {
   // Render position
   const renderPosition = useCallback(() => {
     const c = getCenter()
-    const pos = GPX[simIdx]
+    const pos = currentPosition
     const p = latLonPx(pos[0], pos[1], zoom)
     const x = p.x - c.x + HALF
     const y = p.y - c.y + HALF
@@ -249,13 +303,18 @@ function App() {
         <circle cx={x} cy={y} r="5" fill="#007AFF" stroke="#fff" strokeWidth="2" />
       </>
     )
-  }, [getCenter, simIdx, zoom])
+  }, [getCenter, currentPosition, zoom])
 
   // Simulation control
   const toggleSim = useCallback(() => {
     if (!running) {
       setRunning(true)
-      setWalkedPath([GPX[simIdx]])
+      simStateRef.current = { segmentIdx: 0, progress: 0, lateralOffset: 0 }
+      setSimIdx(0)
+      setSegmentProgress(0)
+      setLateralOffset(0)
+      setCurrentPosition(GPX[0])
+      setWalkedPath([GPX[0]])
       resetSleepTimer()
     } else {
       setRunning(false)
@@ -267,7 +326,7 @@ function App() {
       }
       wakeUp(false)
     }
-  }, [running, simIdx, resetSleepTimer, wakeUp])
+  }, [running, resetSleepTimer, wakeUp])
 
   const recenter = useCallback(() => {
     setFollowMode(true)
@@ -327,29 +386,64 @@ function App() {
     return () => clearInterval(timer)
   }, [])
 
-  // Simulation interval
+  // Simulation interval - continuous movement
   useEffect(() => {
     if (running) {
+      const STEP_SIZE = 0.04 // Progress per step (smaller = smoother)
+      const INTERVAL_MS = 150 // Update every 150ms
+      const MAX_LATERAL_OFFSET = 8 // Max deviation in meters
+      const OFFSET_CHANGE_RATE = 0.8 // How much the offset can change per step
+
       intervalRef.current = window.setInterval(() => {
-        setSimIdx(prev => {
-          const next = (prev + 1) % GPX.length
-          if (next === 0) {
-            setWalkedPath([])
-          } else {
-            setWalkedPath(path => [...path, GPX[next]])
+        const state = simStateRef.current
+
+        // Update lateral offset with smooth random walk
+        const offsetChange = (Math.random() - 0.5) * OFFSET_CHANGE_RATE
+        let newOffset = state.lateralOffset + offsetChange
+        newOffset = Math.max(-MAX_LATERAL_OFFSET, Math.min(MAX_LATERAL_OFFSET, newOffset))
+
+        // Update progress
+        let newProgress = state.progress + STEP_SIZE
+        let newSegmentIdx = state.segmentIdx
+
+        if (newProgress >= 1.0) {
+          // Move to next segment
+          newSegmentIdx = state.segmentIdx + 1
+
+          if (newSegmentIdx >= GPX.length - 1) {
+            // Reached end, stop simulation
+            setRunning(false)
+            return
           }
 
-          // Check for turn instruction
-          const instr = TURNS.find(t => t.idx === next)
+          newProgress = 0
+
+          // Check for turn instruction at next waypoint
+          const instr = TURNS.find(t => t.idx === newSegmentIdx)
           if (instr) {
             wakeUp(true)
             resetSleepTimer()
           }
+        }
 
-          return next
-        })
+        // Update ref state
+        simStateRef.current = {
+          segmentIdx: newSegmentIdx,
+          progress: newProgress,
+          lateralOffset: newOffset
+        }
+
+        // Calculate new position with deviation
+        const newPos = calculateDeviatedPosition(newSegmentIdx, newProgress, newOffset)
+
+        // Update React state
+        setSimIdx(newSegmentIdx)
+        setSegmentProgress(newProgress)
+        setLateralOffset(newOffset)
+        setCurrentPosition(newPos)
+        setWalkedPath(path => [...path, newPos])
         setFollowMode(true)
-      }, 1200)
+      }, INTERVAL_MS)
 
       return () => {
         if (intervalRef.current) {
@@ -357,7 +451,7 @@ function App() {
         }
       }
     }
-  }, [running, wakeUp, resetSleepTimer])
+  }, [running, wakeUp, resetSleepTimer, calculateDeviatedPosition])
 
   // Sleep timer effect
   useEffect(() => {
@@ -371,7 +465,10 @@ function App() {
 
   // Get current instruction and distance
   const instr = currentInstruction()
-  const distance = simIdx < GPX.length - 1 ? Math.round(haversine(GPX[simIdx], GPX[simIdx + 1])) : 0
+  const distanceToNext = simIdx < GPX.length - 1
+    ? Math.round(haversine(currentPosition, GPX[simIdx + 1]) * (1 - segmentProgress) +
+        (simIdx < GPX.length - 2 ? haversine(GPX[simIdx + 1], GPX[simIdx + 2]) : 0) * segmentProgress)
+    : 0
 
   return (
     <div className="app-container">
@@ -393,7 +490,7 @@ function App() {
             <span className="nav-icon">{instr.icon}</span>
             <div>
               <div className="nav-text">{instr.text}</div>
-              <div className="nav-dist">{distance}m zum nächsten Punkt</div>
+              <div className="nav-dist">{distanceToNext}m zum nächsten Punkt</div>
             </div>
           </div>
           <div className="zoom-ind">Z{zoom}</div>
