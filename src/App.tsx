@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, type ReactElement } from 'react'
 import './App.css'
 
 // Types
@@ -219,7 +219,7 @@ function App() {
   // Render tiles
   const renderTiles = useCallback(() => {
     const c = getCenter()
-    const tiles: JSX.Element[] = []
+    const tiles: ReactElement[] = []
     const needed = Math.ceil(W / TILE_SIZE) + 2
     const half = Math.floor(needed / 2)
     const ctX = Math.floor(c.x / TILE_SIZE)
