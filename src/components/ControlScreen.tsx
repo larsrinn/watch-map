@@ -5,13 +5,16 @@ import type { PreloadStatus } from '../tilePreloader'
 interface ControlScreenProps {
   gpxFileName: string
   isTracking: boolean
+  hasTrack: boolean
   onGpxLoad: (content: string, fileName: string) => void
   onStartTrack: () => void
-  onStopClear: () => void
+  onStop: () => void
+  onClear: () => void
+  onExportGpx: () => void
   preloadStatus: PreloadStatus
 }
 
-export function ControlScreen({ gpxFileName, isTracking, onGpxLoad, onStartTrack, onStopClear, preloadStatus }: ControlScreenProps) {
+export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, onStartTrack, onStop, onClear, onExportGpx, preloadStatus }: ControlScreenProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +51,7 @@ export function ControlScreen({ gpxFileName, isTracking, onGpxLoad, onStartTrack
   })()
 
   return (
-    <div className="control-screen">
+    <div className={`control-screen${hasTrack && !isTracking ? ' control-screen--has-track' : ''}`}>
       <div className="control-filename">{gpxFileName}</div>
       {statusEl}
       <input
@@ -67,15 +70,26 @@ export function ControlScreen({ gpxFileName, isTracking, onGpxLoad, onStartTrack
         disabled={isTracking}
         onClick={onStartTrack}
       >
-        {isTracking ? 'Tracking...' : 'Start Track'}
+        {isTracking ? 'Tracking...' : hasTrack ? 'New Track' : 'Start Track'}
       </button>
-      <button
-        className="btn control-btn"
-        style={{ background: isTracking ? '#c0392b' : '#555' }}
-        onClick={onStopClear}
-      >
-        Stop / Clear
-      </button>
+      {isTracking ? (
+        <button className="btn control-btn" style={{ background: '#c0392b' }} onClick={onStop}>
+          Stop
+        </button>
+      ) : hasTrack ? (
+        <>
+          <button className="btn control-btn" style={{ background: '#555' }} onClick={onClear}>
+            Clear
+          </button>
+          <button className="btn control-btn" style={{ background: '#2980b9' }} onClick={onExportGpx}>
+            Export GPX
+          </button>
+        </>
+      ) : (
+        <button className="btn control-btn" style={{ background: '#555' }} disabled>
+          Stop
+        </button>
+      )}
     </div>
   )
 }

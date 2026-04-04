@@ -11,6 +11,7 @@ import { TrackStatsScreen } from './components/TrackStatsScreen'
 import type { RecordedPoint } from './types'
 import { preloadTiles } from './tilePreloader'
 import type { PreloadStatus } from './tilePreloader'
+import { exportGpx } from './gpxExport'
 
 // Constants
 const MIN_ZOOM = 10
@@ -143,12 +144,28 @@ function App() {
     setCurrentScreen(1)
   }, [])
 
-  const handleStopClear = useCallback(() => {
+  const handleStop = useCallback(() => {
     setIsTracking(false)
-    setWalkedPath([])
-    localStorage.removeItem('watch-nav-track')
     stopSimulation()
   }, [stopSimulation])
+
+  const handleClear = useCallback(() => {
+    setWalkedPath([])
+    localStorage.removeItem('watch-nav-track')
+  }, [])
+
+  const handleExportGpx = useCallback(() => {
+    if (walkedPath.length === 0) return
+    const content = exportGpx(walkedPath)
+    const fileName = `track-${new Date().toISOString().slice(0, 10)}.gpx`
+    const blob = new Blob([content], { type: 'application/gpx+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [walkedPath])
 
   const handleStartSimulation = useCallback((duration: number) => {
     setIsTracking(true)
@@ -323,9 +340,12 @@ function App() {
               <ControlScreen
                 gpxFileName={gpxFileName}
                 isTracking={isTracking}
+                hasTrack={walkedPath.length > 0}
                 onGpxLoad={handleGpxLoad}
                 onStartTrack={handleStartTrack}
-                onStopClear={handleStopClear}
+                onStop={handleStop}
+                onClear={handleClear}
+                onExportGpx={handleExportGpx}
                 preloadStatus={preloadStatus}
               />
             </div>

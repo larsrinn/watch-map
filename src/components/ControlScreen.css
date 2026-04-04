@@ -11,6 +11,10 @@
   color: #fff;
 }
 
+.control-screen--has-track {
+  gap: 5px;
+}
+
 .control-filename {
   font-size: 10px;
   color: #888;
