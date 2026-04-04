@@ -23,6 +23,7 @@ export function usePosition(trackPoints: [number, number][]): {
   position: [number, number]
   segmentIdx: number
   segmentProgress: number
+  altitude: number | null
   isActive: boolean
   isSimulating: boolean
   isSimPaused: boolean
@@ -33,6 +34,7 @@ export function usePosition(trackPoints: [number, number][]): {
 } {
   const [gpsPosition, setGpsPosition] = useState<[number, number] | null>(null)
   const [gpsSegmentIdx, setGpsSegmentIdx] = useState(0)
+  const [gpsAltitude, setGpsAltitude] = useState<number | null>(null)
   const [hasGpsFix, setHasGpsFix] = useState(false)
 
   const sim = useSimulation(trackPoints)
@@ -48,6 +50,7 @@ export function usePosition(trackPoints: [number, number][]): {
         const p: [number, number] = [pos.coords.latitude, pos.coords.longitude]
         setGpsPosition(p)
         setGpsSegmentIdx(nearestSegmentIdx(trackPoints, p))
+        setGpsAltitude(pos.coords.altitude)
         setHasGpsFix(true)
       },
       () => {
@@ -64,6 +67,7 @@ export function usePosition(trackPoints: [number, number][]): {
       position: sim.position,
       segmentIdx: sim.segmentIdx,
       segmentProgress: sim.segmentProgress,
+      altitude: null,
       isActive: true,
       isSimulating: sim.isRunning,
       isSimPaused: sim.isPaused,
@@ -78,6 +82,7 @@ export function usePosition(trackPoints: [number, number][]): {
     position: gpsPosition ?? trackPoints[0],
     segmentIdx: gpsSegmentIdx,
     segmentProgress: 0,
+    altitude: gpsAltitude,
     isActive: hasGpsFix,
     isSimulating: false,
     isSimPaused: false,

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, type ReactElement } from 'react'
+import type { RecordedPoint } from './types'
 
 // Constants
 const TILE_SIZE = 256
@@ -37,7 +38,7 @@ interface MapViewProps {
   offsetX: number
   offsetY: number
   trackPoints: [number, number][]
-  walkedPath: [number, number][]
+  walkedPath: RecordedPoint[]
   sleeping: boolean
   onSleepClick: () => void
   currentTime: Date
@@ -142,7 +143,7 @@ export function MapView({
     })
     const trackD = trackPts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
 
-    const walked = walkedPath.map(([lat, lon]) => {
+    const walked = walkedPath.map(({ lat, lon }) => {
       const p = latLonPx(lat, lon, zoom)
       return { x: p.x - c.x + HALF, y: p.y - c.y + HALF }
     })

@@ -7,12 +7,14 @@ import { MapView } from './MapView'
 import { usePosition } from './hooks/usePosition'
 import { DevPanel } from './components/DevPanel'
 import { ControlScreen } from './components/ControlScreen'
+import { TrackStatsScreen } from './components/TrackStatsScreen'
+import type { RecordedPoint } from './types'
 
 // Constants
 const MIN_ZOOM = 10
 const MAX_ZOOM = 17
 const SLEEP_TIMEOUT = 3000
-const SCREEN_COUNT = 2 // increment and add a <div className="screen-slide"> to add future screens
+const SCREEN_COUNT = 3
 
 // Helpers
 function formatDistance(meters: number): string {
@@ -51,12 +53,17 @@ function App() {
   const [offsetX, setOffsetX] = useState(0)
   const [offsetY, setOffsetY] = useState(0)
   const [sleeping, setSleeping] = useState(false)
-  const [walkedPath, setWalkedPath] = useState<[number, number][]>([])
+  const [walkedPath, setWalkedPath] = useState<RecordedPoint[]>(() => {
+    try {
+      const saved = localStorage.getItem('watch-nav-track')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
   const [currentTime, setCurrentTime] = useState(new Date())
   const [haptic, setHaptic] = useState(false)
 
   // Position (real GPS or simulation)
-  const { position, segmentIdx, isActive, isSimulating, isSimPaused,
+  const { position, segmentIdx, altitude, isActive, isSimulating, isSimPaused,
           startSimulation, pauseSimulation, resumeSimulation, stopSimulation } = usePosition(gpxData.trackPoints)
 
   // Refs
@@ -109,25 +116,27 @@ function App() {
     setGpxFileName(fileName)
     setIsTracking(false)
     setWalkedPath([])
+    localStorage.removeItem('watch-nav-track')
   }, [])
 
   const handleStartTrack = useCallback(() => {
     setIsTracking(true)
-    setWalkedPath([gpxData.trackPoints[0]])
+    setWalkedPath([])
     setCurrentScreen(1)
-  }, [gpxData.trackPoints])
+  }, [])
 
   const handleStopClear = useCallback(() => {
     setIsTracking(false)
     setWalkedPath([])
+    localStorage.removeItem('watch-nav-track')
     stopSimulation()
   }, [stopSimulation])
 
   const handleStartSimulation = useCallback((duration: number) => {
     setIsTracking(true)
-    setWalkedPath([gpxData.trackPoints[0]])
+    setWalkedPath([])
     startSimulation(duration)
-  }, [startSimulation, gpxData.trackPoints])
+  }, [startSimulation])
 
   // Event handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -216,9 +225,16 @@ function App() {
   // Accumulate walked path when tracking is active
   useEffect(() => {
     if (!isActive || !isTracking) return
-    setWalkedPath(path => [...path, position])
+    setWalkedPath(path => [...path, { lat: position[0], lon: position[1], alt: altitude, ts: Date.now() }])
     setFollowMode(true)
   }, [position, isActive, isTracking])
+
+  // Persist walked path to localStorage
+  useEffect(() => {
+    if (walkedPath.length > 0) {
+      localStorage.setItem('watch-nav-track', JSON.stringify(walkedPath))
+    }
+  }, [walkedPath])
 
   // Turn detection — wake + haptic when crossing a waypoint with a turn instruction
   useEffect(() => {
@@ -286,6 +302,12 @@ function App() {
                   text: instr.text,
                   distText: formatDistance(distanceToNext),
                 }}
+              />
+            </div>
+            <div className="screen-slide">
+              <TrackStatsScreen
+                walkedPath={walkedPath}
+                isTracking={isTracking}
               />
             </div>
           </div>
