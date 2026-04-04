@@ -9,6 +9,8 @@ import { DevPanel } from './components/DevPanel'
 import { ControlScreen } from './components/ControlScreen'
 import { TrackStatsScreen } from './components/TrackStatsScreen'
 import type { RecordedPoint } from './types'
+import { preloadTiles } from './tilePreloader'
+import type { PreloadStatus } from './tilePreloader'
 
 // Constants
 const MIN_ZOOM = 10
@@ -46,6 +48,8 @@ function App() {
   const [gpxData, setGpxData] = useState<ParsedGpx>(() => parseGpx(gpxContent))
   const [gpxFileName, setGpxFileName] = useState('2026-04-03-demo.gpx')
   const [isTracking, setIsTracking] = useState(false)
+  const [preloadStatus, setPreloadStatus] = useState<PreloadStatus>({ phase: 'idle' })
+  const preloadAbortRef = useRef<AbortController | null>(null)
 
   // Map state
   const [zoom, setZoom] = useState(15)
@@ -117,6 +121,20 @@ function App() {
     setIsTracking(false)
     setWalkedPath([])
     localStorage.removeItem('watch-nav-track')
+
+    preloadAbortRef.current?.abort()
+    const controller = new AbortController()
+    preloadAbortRef.current = controller
+    setPreloadStatus({ phase: 'running', done: 0, total: 0 })
+    preloadTiles(
+      parsed.trackPoints,
+      (done, total) => setPreloadStatus({ phase: 'running', done, total }),
+      controller.signal,
+    ).then(({ cached }) => {
+      setPreloadStatus({ phase: 'done', cached })
+    }).catch((err: unknown) => {
+      if ((err as Error)?.name !== 'AbortError') setPreloadStatus({ phase: 'error' })
+    })
   }, [])
 
   const handleStartTrack = useCallback(() => {
@@ -283,6 +301,7 @@ function App() {
                 onGpxLoad={handleGpxLoad}
                 onStartTrack={handleStartTrack}
                 onStopClear={handleStopClear}
+                preloadStatus={preloadStatus}
               />
             </div>
             <div className="screen-slide">
