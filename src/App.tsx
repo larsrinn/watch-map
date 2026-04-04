@@ -8,6 +8,7 @@ import { usePosition } from './hooks/usePosition'
 import { DevPanel } from './components/DevPanel'
 import { ControlScreen } from './components/ControlScreen'
 import { TrackStatsScreen } from './components/TrackStatsScreen'
+import { SettingsScreen } from './components/SettingsScreen'
 import type { RecordedPoint } from './types'
 import { preloadTiles } from './tilePreloader'
 import type { PreloadStatus } from './tilePreloader'
@@ -17,7 +18,7 @@ import { exportGpx } from './gpxExport'
 const MIN_ZOOM = 10
 const MAX_ZOOM = 17
 const SLEEP_TIMEOUT = 3000
-const SCREEN_COUNT = 3
+const SCREEN_COUNT = 4
 
 // Helpers
 function formatDistance(meters: number): string {
@@ -43,6 +44,10 @@ function App() {
   const [isTracking, setIsTracking] = useState(false)
   const [preloadStatus, setPreloadStatus] = useState<PreloadStatus>({ phase: 'idle' })
   const preloadAbortRef = useRef<AbortController | null>(null)
+
+  // Settings state
+  const [showTrackDots, setShowTrackDots] = useState(false)
+  const [showTurnDots, setShowTurnDots] = useState(false)
 
   // Map state
   const [zoom, setZoom] = useState(15)
@@ -354,12 +359,23 @@ function App() {
                   distText: formatDistance(distanceToNext),
                   totalDistText: formatDistance(totalRemaining),
                 }}
+                showTrackDots={showTrackDots}
+                showTurnDots={showTurnDots}
+                turns={gpxData.turns}
               />
             </div>
             <div className="screen-slide">
               <TrackStatsScreen
                 walkedPath={walkedPath}
                 isTracking={isTracking}
+              />
+            </div>
+            <div className="screen-slide">
+              <SettingsScreen
+                showTrackDots={showTrackDots}
+                showTurnDots={showTurnDots}
+                onToggleTrackDots={() => setShowTrackDots(v => !v)}
+                onToggleTurnDots={() => setShowTurnDots(v => !v)}
               />
             </div>
           </div>

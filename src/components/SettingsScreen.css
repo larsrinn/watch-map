@@ -1,0 +1,72 @@
+.settings-screen {
+  width: 198px;
+  height: 198px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 20px;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.settings-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.settings-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ccc;
+}
+
+.settings-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.settings-dot-blue {
+  background: #3498db;
+}
+
+.settings-dot-yellow {
+  background: #f1c40f;
+}
+
+.settings-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #444;
+  color: #888;
+  min-width: 38px;
+  letter-spacing: 0.5px;
+}
+
+.settings-toggle-on {
+  background: #3498db;
+  color: #fff;
+}

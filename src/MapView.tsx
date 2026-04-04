@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, type ReactElement } from 'react'
 import type { RecordedPoint } from './types'
+import type { TurnInstruction } from './gpxParser'
 
 // Constants
 const TILE_SIZE = 256
@@ -44,6 +45,9 @@ interface MapViewProps {
   onSleepClick: () => void
   currentTime: Date
   navInstruction: NavInstruction
+  showTrackDots: boolean
+  showTurnDots: boolean
+  turns: TurnInstruction[]
 }
 
 export function MapView({
@@ -58,6 +62,9 @@ export function MapView({
   onSleepClick,
   currentTime,
   navInstruction,
+  showTrackDots,
+  showTurnDots,
+  turns,
 }: MapViewProps) {
   const [renderKey, setRenderKey] = useState(0)
   const [cacheSize, setCacheSize] = useState(0)
@@ -162,9 +169,17 @@ export function MapView({
             <path d={walkedD} fill="none" stroke="#f39c12" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
           </>
         )}
+        {showTrackDots && trackPts.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="2" fill="#3498db" opacity="0.7" />
+        ))}
+        {showTurnDots && turns.map((t) => {
+          const tp = trackPts[t.idx]
+          if (!tp) return null
+          return <circle key={t.idx} cx={tp.x} cy={tp.y} r="3.5" fill="#f1c40f" stroke="#fff" strokeWidth="1" opacity="0.9" />
+        })}
       </>
     )
-  }, [getCenter, zoom, trackPoints, walkedPath])
+  }, [getCenter, zoom, trackPoints, walkedPath, showTrackDots, showTurnDots, turns])
 
   const renderPosition = useCallback(() => {
     const c = getCenter()
