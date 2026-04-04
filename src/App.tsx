@@ -275,6 +275,31 @@ function App() {
     }
   }, [resetSleepTimer])
 
+  // Screen Wake Lock — prevent phone screen from locking while tracking
+  useEffect(() => {
+    if (!isTracking || !('wakeLock' in navigator)) return
+    let wakeLock: WakeLockSentinel | null = null
+
+    const acquire = async () => {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen')
+      } catch {
+        // silently ignore — e.g. battery saver mode
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') acquire()
+    }
+
+    acquire()
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      wakeLock?.release()
+    }
+  }, [isTracking])
+
   const instr = currentInstruction()
   const nextPtIdx = Math.min(segmentIdx + 1, gpxData.trackPoints.length - 1)
   const distanceToNext = Math.round(haversine(position, gpxData.trackPoints[nextPtIdx]) + gpxData.distToNextTurn[nextPtIdx])
