@@ -1,28 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSimulation } from './useSimulation'
+import { createMapMatcher, DEFAULT_CONFIG } from '../mapMatcher'
+import type { MapMatcher, NavigationState } from '../mapMatcher'
+import type { TurnInstruction } from '../gpxParser'
 
-function nearestSegmentIdx(
-  trackPoints: [number, number][],
-  position: [number, number]
-): number {
-  let minDist = Infinity
-  let nearest = 0
-  for (let i = 0; i < trackPoints.length; i++) {
-    const dLat = trackPoints[i][0] - position[0]
-    const dLon = trackPoints[i][1] - position[1]
-    const dist = dLat * dLat + dLon * dLon
-    if (dist < minDist) {
-      minDist = dist
-      nearest = i
-    }
-  }
-  return nearest
+function makeInitialNavState(trackPoints: [number, number][], turns: TurnInstruction[]): NavigationState {
+  const matcher = createMapMatcher(trackPoints, turns)
+  if (trackPoints.length === 0) return matcher.updatePosition(0, 0)
+  return matcher.updatePosition(trackPoints[0][0], trackPoints[0][1])
 }
 
-export function usePosition(trackPoints: [number, number][]): {
+export function usePosition(
+  trackPoints: [number, number][],
+  turns: TurnInstruction[]
+): {
   position: [number, number]
   segmentIdx: number
-  segmentProgress: number
+  navigationState: NavigationState
   altitude: number | null
   isActive: boolean
   isSimulating: boolean
@@ -33,14 +27,27 @@ export function usePosition(trackPoints: [number, number][]): {
   stopSimulation: () => void
 } {
   const [gpsPosition, setGpsPosition] = useState<[number, number] | null>(null)
-  const [gpsSegmentIdx, setGpsSegmentIdx] = useState(0)
   const [gpsAltitude, setGpsAltitude] = useState<number | null>(null)
   const [hasGpsFix, setHasGpsFix] = useState(false)
+  const [navigationState, setNavigationState] = useState<NavigationState>(
+    () => makeInitialNavState(trackPoints, turns)
+  )
+
+  const matcherRef = useRef<MapMatcher | null>(null)
 
   const sim = useSimulation(trackPoints)
-
   const simActive = import.meta.env.DEV && (sim.isRunning || sim.isPaused)
 
+  // Recreate map matcher when track changes
+  useEffect(() => {
+    const m = createMapMatcher(trackPoints, turns, DEFAULT_CONFIG)
+    matcherRef.current = m
+    if (trackPoints.length > 0) {
+      setNavigationState(m.updatePosition(trackPoints[0][0], trackPoints[0][1]))
+    }
+  }, [trackPoints, turns])
+
+  // GPS tracking
   useEffect(() => {
     if (!navigator.geolocation) return
     if (simActive) return
@@ -49,9 +56,11 @@ export function usePosition(trackPoints: [number, number][]): {
       (pos) => {
         const p: [number, number] = [pos.coords.latitude, pos.coords.longitude]
         setGpsPosition(p)
-        setGpsSegmentIdx(nearestSegmentIdx(trackPoints, p))
         setGpsAltitude(pos.coords.altitude)
         setHasGpsFix(true)
+        if (matcherRef.current) {
+          setNavigationState(matcherRef.current.updatePosition(p[0], p[1]))
+        }
       },
       () => {
         setHasGpsFix(false)
@@ -62,11 +71,19 @@ export function usePosition(trackPoints: [number, number][]): {
     return () => navigator.geolocation.clearWatch(watchId)
   }, [trackPoints, simActive])
 
+  // Feed simulation positions through the map matcher
+  useEffect(() => {
+    if (!simActive) return
+    if (matcherRef.current) {
+      setNavigationState(matcherRef.current.updatePosition(sim.position[0], sim.position[1]))
+    }
+  }, [simActive, sim.position])
+
   if (simActive) {
     return {
       position: sim.position,
-      segmentIdx: sim.segmentIdx,
-      segmentProgress: sim.segmentProgress,
+      segmentIdx: navigationState.currentIndex,
+      navigationState,
       altitude: null,
       isActive: true,
       isSimulating: sim.isRunning,
@@ -79,9 +96,9 @@ export function usePosition(trackPoints: [number, number][]): {
   }
 
   return {
-    position: gpsPosition ?? trackPoints[0],
-    segmentIdx: gpsSegmentIdx,
-    segmentProgress: 0,
+    position: gpsPosition ?? (trackPoints[0] ?? [0, 0]),
+    segmentIdx: navigationState.currentIndex,
+    navigationState,
     altitude: gpsAltitude,
     isActive: hasGpsFix,
     isSimulating: false,

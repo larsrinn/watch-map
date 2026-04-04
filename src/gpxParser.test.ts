@@ -218,6 +218,43 @@ describe('next turn instruction lookup', () => {
   })
 })
 
+const NO_TURNS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1">
+  <trk>
+    <name>No Turns</name>
+    <trkseg>
+      <trkpt lat="50.000" lon="8.0"></trkpt>
+      <trkpt lat="50.001" lon="8.0"></trkpt>
+      <trkpt lat="50.002" lon="8.0"></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`
+
+describe('GPX without rte tag (no turn instructions)', () => {
+  it('returns empty turns array', () => {
+    const { turns } = parseGpx(NO_TURNS_FIXTURE)
+    expect(turns).toEqual([])
+  })
+
+  it('still parses track points correctly', () => {
+    const { trackPoints } = parseGpx(NO_TURNS_FIXTURE)
+    expect(trackPoints).toHaveLength(3)
+    expect(trackPoints[0]).toEqual([50.0, 8.0])
+  })
+
+  it('distToNextTurn contains cumulative distance-to-end values', () => {
+    const { trackPoints, distToNextTurn } = parseGpx(NO_TURNS_FIXTURE)
+    expect(distToNextTurn).toHaveLength(3)
+    // Last point: 0
+    expect(distToNextTurn[2]).toBe(0)
+    // Second-to-last: one segment
+    expect(distToNextTurn[1]).toBeCloseTo(haversine(trackPoints[1], trackPoints[2]), 0)
+    // First: two segments (distance to end)
+    const expected = haversine(trackPoints[0], trackPoints[1]) + haversine(trackPoints[1], trackPoints[2])
+    expect(distToNextTurn[0]).toBeCloseTo(expected, 0)
+  })
+})
+
 describe('runtime distance formula', () => {
   it('gives correct distance when standing exactly on a track point', () => {
     const { trackPoints, distToNextTurn } = parseGpx(DIST_FIXTURE)

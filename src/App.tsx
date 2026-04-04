@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import './App.css'
 import gpxContent from './assets/2026-04-03-demo.gpx?raw'
 import { parseGpx } from './gpxParser'
-import type { ParsedGpx, TurnInstruction } from './gpxParser'
+import type { ParsedGpx } from './gpxParser'
 import { MapView } from './MapView'
 import { usePosition } from './hooks/usePosition'
 import { DevPanel } from './components/DevPanel'
@@ -30,14 +30,6 @@ function formatDistance(meters: number): string {
   }
 }
 
-function haversine(a: [number, number], b: [number, number]): number {
-  const R = 6371000
-  const r = Math.PI / 180
-  const dLat = (b[0] - a[0]) * r
-  const dLon = (b[1] - a[1]) * r
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s))
-}
 
 function App() {
   // Screen navigation
@@ -68,18 +60,13 @@ function App() {
   const [haptic, setHaptic] = useState(false)
 
   // Position (real GPS or simulation)
-  const { position, segmentIdx, altitude, isActive, isSimulating, isSimPaused,
-          startSimulation, pauseSimulation, resumeSimulation, stopSimulation } = usePosition(gpxData.trackPoints)
+  const { position, segmentIdx, navigationState, altitude, isActive, isSimulating, isSimPaused,
+          startSimulation, pauseSimulation, resumeSimulation, stopSimulation } = usePosition(gpxData.trackPoints, gpxData.turns)
 
   // Refs
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
   const sleepTimerRef = useRef<number | null>(null)
   const prevSegmentIdxRef = useRef(0)
-
-  // Get current instruction
-  const currentInstruction = useCallback((): TurnInstruction => {
-    return gpxData.turns.find(t => t.idx > segmentIdx) ?? gpxData.turns[gpxData.turns.length - 1]
-  }, [segmentIdx, gpxData.turns])
 
   // Sleep/Wake functions
   const goToSleep = useCallback(() => {
@@ -317,9 +304,9 @@ function App() {
     }
   }, [isTracking])
 
-  const instr = currentInstruction()
-  const nextPtIdx = Math.min(segmentIdx + 1, gpxData.trackPoints.length - 1)
-  const distanceToNext = Math.round(haversine(position, gpxData.trackPoints[nextPtIdx]) + gpxData.distToNextTurn[nextPtIdx])
+  const instr = navigationState.nextTurn
+  const distanceToNext = Math.round(navigationState.distanceToNextTurn ?? navigationState.totalRemaining)
+  const totalRemaining = Math.round(navigationState.totalRemaining)
 
   return (
     <div className="app-container">
@@ -362,9 +349,10 @@ function App() {
                 onSleepClick={handleSleepClick}
                 currentTime={currentTime}
                 navInstruction={{
-                  icon: instr.icon,
-                  text: instr.text,
+                  icon: instr?.icon ?? '↑',
+                  text: instr?.text ?? '',
                   distText: formatDistance(distanceToNext),
+                  totalDistText: formatDistance(totalRemaining),
                 }}
               />
             </div>

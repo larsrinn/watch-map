@@ -29,6 +29,7 @@ export interface NavInstruction {
   icon: string
   text: string
   distText: string
+  totalDistText: string
 }
 
 interface MapViewProps {
@@ -193,6 +194,7 @@ export function MapView({
         <div className="nav-details">
           <div className="nav-text">{navInstruction.text}</div>
           <div className="nav-dist">{navInstruction.distText}</div>
+          <div className="nav-total">{navInstruction.totalDistText}</div>
         </div>
       </div>
       <div className="zoom-ind">Z{zoom}</div>
@@ -210,6 +212,7 @@ export function MapView({
         <div className="sleep-nav-icon">{navInstruction.icon}</div>
         <div className="nav-hint">{navInstruction.text}</div>
         <div className="sleep-nav-dist">{navInstruction.distText}</div>
+        <div className="sleep-nav-total">{navInstruction.totalDistText}</div>
       </div>
     </>
   )
