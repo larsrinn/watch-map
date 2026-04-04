@@ -39,9 +39,6 @@ interface MapViewProps {
   trackPoints: [number, number][]
   walkedPath: [number, number][]
   sleeping: boolean
-  haptic: boolean
-  onWheel: (e: React.WheelEvent) => void
-  onPointerDown: (e: React.PointerEvent) => void
   onSleepClick: () => void
   currentTime: Date
   navInstruction: NavInstruction
@@ -56,9 +53,6 @@ export function MapView({
   trackPoints,
   walkedPath,
   sleeping,
-  haptic,
-  onWheel,
-  onPointerDown,
   onSleepClick,
   currentTime,
   navInstruction,
@@ -185,11 +179,7 @@ export function MapView({
   }, [getCenter, currentPosition, zoom])
 
   return (
-    <div
-      className={`watch ${haptic ? 'haptic' : ''} ${sleeping ? 'sleeping' : ''}`}
-      onWheel={onWheel}
-      onPointerDown={onPointerDown}
-    >
+    <>
       <div id="tiles">{!sleeping && renderTiles()}</div>
       <svg className="track-svg" xmlns="http://www.w3.org/2000/svg">
         {!sleeping && renderTrack()}
@@ -199,7 +189,7 @@ export function MapView({
       </svg>
       <div className="nav-banner">
         <span className="nav-icon">{navInstruction.icon}</span>
-        <div>
+        <div className="nav-details">
           <div className="nav-text">{navInstruction.text}</div>
           <div className="nav-dist">{navInstruction.distText}</div>
         </div>
@@ -216,11 +206,10 @@ export function MapView({
           {currentTime.getHours().toString().padStart(2, '0')}:
           {currentTime.getMinutes().toString().padStart(2, '0')}
         </div>
-        <div className="nav-hint">
-          {navInstruction.icon} {navInstruction.text}
-        </div>
-        <div className="tap-hint">Antippen für Karte</div>
+        <div className="sleep-nav-icon">{navInstruction.icon}</div>
+        <div className="nav-hint">{navInstruction.text}</div>
+        <div className="sleep-nav-dist">{navInstruction.distText}</div>
       </div>
-    </div>
+    </>
   )
 }

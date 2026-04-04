@@ -2,20 +2,29 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import './App.css'
 import gpxContent from './assets/2026-04-03-demo.gpx?raw'
 import { parseGpx } from './gpxParser'
-import type { TurnInstruction } from './gpxParser'
+import type { ParsedGpx, TurnInstruction } from './gpxParser'
 import { MapView } from './MapView'
 import { usePosition } from './hooks/usePosition'
 import { DevPanel } from './components/DevPanel'
+import { ControlScreen } from './components/ControlScreen'
 
 // Constants
 const MIN_ZOOM = 10
 const MAX_ZOOM = 17
 const SLEEP_TIMEOUT = 3000
+const SCREEN_COUNT = 2 // increment and add a <div className="screen-slide"> to add future screens
 
-// Parse track from GPX file
-const { trackPoints: GPX, turns: TURNS } = parseGpx(gpxContent)
+// Helpers
+function formatDistance(meters: number): string {
+  if (meters < 100) {
+    return `${Math.round(meters).toLocaleString()} m`
+  } else if (meters < 300) {
+    return `${(meters / 1000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`
+  } else {
+    return `${(meters / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`
+  }
+}
 
-// Helper
 function haversine(a: [number, number], b: [number, number]): number {
   const R = 6371000
   const r = Math.PI / 180
@@ -26,7 +35,17 @@ function haversine(a: [number, number], b: [number, number]): number {
 }
 
 function App() {
-  // State
+  // Screen navigation
+  const [currentScreen, setCurrentScreen] = useState(0)
+  const bezelRef = useRef<HTMLDivElement>(null)
+  const swipeTouchStartRef = useRef<{ x: number; y: number } | null>(null)
+
+  // GPX state
+  const [gpxData, setGpxData] = useState<ParsedGpx>(() => parseGpx(gpxContent))
+  const [gpxFileName, setGpxFileName] = useState('2026-04-03-demo.gpx')
+  const [isTracking, setIsTracking] = useState(false)
+
+  // Map state
   const [zoom, setZoom] = useState(15)
   const [followMode, setFollowMode] = useState(true)
   const [offsetX, setOffsetX] = useState(0)
@@ -37,8 +56,8 @@ function App() {
   const [haptic, setHaptic] = useState(false)
 
   // Position (real GPS or simulation)
-  const { position, segmentIdx, segmentProgress, isActive, isSimulating, isSimPaused,
-          startSimulation, pauseSimulation, resumeSimulation, stopSimulation } = usePosition(GPX)
+  const { position, segmentIdx, isActive, isSimulating, isSimPaused,
+          startSimulation, pauseSimulation, resumeSimulation, stopSimulation } = usePosition(gpxData.trackPoints)
 
   // Refs
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
@@ -47,8 +66,8 @@ function App() {
 
   // Get current instruction
   const currentInstruction = useCallback((): TurnInstruction => {
-    return [...TURNS].reverse().find(t => t.idx <= segmentIdx) || TURNS[0]
-  }, [segmentIdx])
+    return gpxData.turns.find(t => t.idx > segmentIdx) ?? gpxData.turns[gpxData.turns.length - 1]
+  }, [segmentIdx, gpxData.turns])
 
   // Sleep/Wake functions
   const goToSleep = useCallback(() => {
@@ -83,10 +102,32 @@ function App() {
     resetSleepTimer()
   }, [resetSleepTimer])
 
+  // GPX and track control
+  const handleGpxLoad = useCallback((content: string, fileName: string) => {
+    const parsed = parseGpx(content)
+    setGpxData(parsed)
+    setGpxFileName(fileName)
+    setIsTracking(false)
+    setWalkedPath([])
+  }, [])
+
+  const handleStartTrack = useCallback(() => {
+    setIsTracking(true)
+    setWalkedPath([gpxData.trackPoints[0]])
+    setCurrentScreen(1)
+  }, [gpxData.trackPoints])
+
+  const handleStopClear = useCallback(() => {
+    setIsTracking(false)
+    setWalkedPath([])
+    stopSimulation()
+  }, [stopSimulation])
+
   const handleStartSimulation = useCallback((duration: number) => {
-    setWalkedPath([GPX[0]])
+    setIsTracking(true)
+    setWalkedPath([gpxData.trackPoints[0]])
     startSimulation(duration)
-  }, [startSimulation])
+  }, [startSimulation, gpxData.trackPoints])
 
   // Event handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -129,29 +170,66 @@ function App() {
     }
   }, [handlePointerMove, handlePointerUp])
 
+  // Keyboard navigation between screens
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setCurrentScreen(s => Math.min(s + 1, SCREEN_COUNT - 1))
+      if (e.key === 'ArrowLeft') setCurrentScreen(s => Math.max(s - 1, 0))
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  // Touch swipe navigation between screens
+  useEffect(() => {
+    const bezel = bezelRef.current
+    if (!bezel) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      swipeTouchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!swipeTouchStartRef.current) return
+      const dx = e.changedTouches[0].clientX - swipeTouchStartRef.current.x
+      const dy = e.changedTouches[0].clientY - swipeTouchStartRef.current.y
+      swipeTouchStartRef.current = null
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      if (dx < 0) setCurrentScreen(s => Math.min(s + 1, SCREEN_COUNT - 1))
+      else setCurrentScreen(s => Math.max(s - 1, 0))
+    }
+
+    bezel.addEventListener('touchstart', handleTouchStart)
+    bezel.addEventListener('touchend', handleTouchEnd)
+    return () => {
+      bezel.removeEventListener('touchstart', handleTouchStart)
+      bezel.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [])
+
   // Clock update
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
-  // Accumulate walked path and stay centered when position is active
+  // Accumulate walked path when tracking is active
   useEffect(() => {
-    if (!isActive) return
+    if (!isActive || !isTracking) return
     setWalkedPath(path => [...path, position])
     setFollowMode(true)
-  }, [position, isActive])
+  }, [position, isActive, isTracking])
 
   // Turn detection — wake + haptic when crossing a waypoint with a turn instruction
   useEffect(() => {
     if (segmentIdx <= prevSegmentIdxRef.current) return
     prevSegmentIdxRef.current = segmentIdx
-    const instr = TURNS.find(t => t.idx === segmentIdx)
+    const instr = gpxData.turns.find(t => t.idx === segmentIdx)
     if (instr) {
       wakeUp(true)
       resetSleepTimer()
     }
-  }, [segmentIdx, wakeUp, resetSleepTimer])
+  }, [segmentIdx, gpxData.turns, wakeUp, resetSleepTimer])
 
   // Sleep timer
   useEffect(() => {
@@ -164,34 +242,60 @@ function App() {
   }, [resetSleepTimer])
 
   const instr = currentInstruction()
-  const distanceToNext = segmentIdx < GPX.length - 1
-    ? Math.round(haversine(position, GPX[segmentIdx + 1]) * (1 - segmentProgress) +
-        (segmentIdx < GPX.length - 2 ? haversine(GPX[segmentIdx + 1], GPX[segmentIdx + 2]) : 0) * segmentProgress)
-    : 0
+  const nextPtIdx = Math.min(segmentIdx + 1, gpxData.trackPoints.length - 1)
+  const distanceToNext = Math.round(haversine(position, gpxData.trackPoints[nextPtIdx]) + gpxData.distToNextTurn[nextPtIdx])
 
   return (
     <div className="app-container">
-      <div className="bezel">
-        <MapView
-          zoom={zoom}
-          currentPosition={position}
-          followMode={followMode}
-          offsetX={offsetX}
-          offsetY={offsetY}
-          trackPoints={GPX}
-          walkedPath={walkedPath}
-          sleeping={sleeping}
-          haptic={haptic}
-          onWheel={handleWheel}
-          onPointerDown={handlePointerDown}
-          onSleepClick={handleSleepClick}
-          currentTime={currentTime}
-          navInstruction={{
-            icon: instr.icon,
-            text: instr.text,
-            distText: `${distanceToNext}m zum nächsten Punkt`,
-          }}
-        />
+      <div className="bezel" ref={bezelRef}>
+        <div
+          className={`watch ${haptic ? 'haptic' : ''} ${currentScreen === 1 ? 'map-active' : ''} ${currentScreen === 1 && sleeping ? 'sleeping' : ''}`}
+          onWheel={currentScreen === 1 ? handleWheel : undefined}
+          onPointerDown={currentScreen === 1 ? handlePointerDown : undefined}
+        >
+          <div
+            className="screen-strip"
+            style={{
+              width: `${SCREEN_COUNT * 198}px`,
+              transform: `translateX(${-currentScreen * 198}px)`,
+            }}
+          >
+            <div className="screen-slide">
+              <ControlScreen
+                gpxFileName={gpxFileName}
+                isTracking={isTracking}
+                onGpxLoad={handleGpxLoad}
+                onStartTrack={handleStartTrack}
+                onStopClear={handleStopClear}
+              />
+            </div>
+            <div className="screen-slide">
+              <MapView
+                zoom={zoom}
+                currentPosition={position}
+                followMode={followMode}
+                offsetX={offsetX}
+                offsetY={offsetY}
+                trackPoints={gpxData.trackPoints}
+                walkedPath={walkedPath}
+                sleeping={sleeping}
+                onSleepClick={handleSleepClick}
+                currentTime={currentTime}
+                navInstruction={{
+                  icon: instr.icon,
+                  text: instr.text,
+                  distText: formatDistance(distanceToNext),
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="screen-dots">
+        {Array.from({ length: SCREEN_COUNT }, (_, i) => (
+          <div key={i} className={`dot${i === currentScreen ? ' dot-active' : ''}`} />
+        ))}
       </div>
 
       <div className="legend">
@@ -234,7 +338,7 @@ function App() {
 
       <div className="hint">
         Display schläft nach 3s ein · Antippen weckt auf · Bei Abbiegehinweis wacht es automatisch auf<br />
-        Scroll = Zoom · Drag = Pan
+        Scroll = Zoom · Drag = Pan · ←→ Bildschirm wechseln
       </div>
     </div>
   )

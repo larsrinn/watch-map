@@ -55,6 +55,15 @@ export function useSimulation(trackPoints: [number, number][]): {
   const simStateRef = useRef({ segmentIdx: 0, progress: 0, lateralOffset: 0 })
   const durationRef = useRef(60)
 
+  useEffect(() => {
+    setIsRunning(false)
+    setIsPaused(false)
+    setPosition(trackPoints[0])
+    setSegmentIdx(0)
+    setSegmentProgress(0)
+    simStateRef.current = { segmentIdx: 0, progress: 0, lateralOffset: 0 }
+  }, [trackPoints])
+
   const start = useCallback((durationSeconds: number) => {
     durationRef.current = durationSeconds
     simStateRef.current = { segmentIdx: 0, progress: 0, lateralOffset: 0 }
