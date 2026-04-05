@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import './App.css'
-import gpxContent from './assets/2026-04-03-demo.gpx?raw'
 import { parseGpx } from './gpxParser'
 import type { ParsedGpx } from './gpxParser'
 import { MapView } from './MapView'
@@ -38,8 +37,8 @@ function App() {
   const swipeTouchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   // GPX state
-  const [gpxData, setGpxData] = useState<ParsedGpx>(() => parseGpx(gpxContent))
-  const [gpxFileName, setGpxFileName] = useState('2026-04-03-demo.gpx')
+  const [gpxData, setGpxData] = useState<ParsedGpx | null>(null)
+  const [gpxFileName, setGpxFileName] = useState('')
   const [isTracking, setIsTracking] = useState(false)
   const [preloadStatus, setPreloadStatus] = useState<PreloadStatus>({ phase: 'idle' })
   const preloadAbortRef = useRef<AbortController | null>(null)
@@ -64,7 +63,7 @@ function App() {
   const [haptic, setHaptic] = useState(false)
 
   // Position (real GPS)
-  const { position, segmentIdx, navigationState, altitude, isActive } = usePosition(gpxData.trackPoints, gpxData.turns)
+  const { position, segmentIdx, navigationState, altitude, isActive } = usePosition(gpxData?.trackPoints ?? [], gpxData?.turns ?? [])
 
   // Refs
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
@@ -264,12 +263,12 @@ function App() {
   useEffect(() => {
     if (segmentIdx <= prevSegmentIdxRef.current) return
     prevSegmentIdxRef.current = segmentIdx
-    const instr = gpxData.turns.find(t => t.idx === segmentIdx)
+    const instr = gpxData?.turns.find(t => t.idx === segmentIdx)
     if (instr) {
       wakeUp(true)
       resetSleepTimer()
     }
-  }, [segmentIdx, gpxData.turns, wakeUp, resetSleepTimer])
+  }, [segmentIdx, gpxData?.turns, wakeUp, resetSleepTimer])
 
   // Sleep timer
   useEffect(() => {
@@ -309,6 +308,12 @@ function App() {
   const instr = navigationState.nextTurn
   const distanceToNext = Math.round(navigationState.distanceToNextTurn ?? navigationState.totalRemaining)
   const totalRemaining = Math.round(navigationState.totalRemaining)
+  const navInstruction = gpxData ? {
+    icon: instr?.icon ?? '↑',
+    text: instr?.text ?? '',
+    distText: formatDistance(distanceToNext),
+    totalDistText: formatDistance(totalRemaining),
+  } : null
 
   return (
     <div className="app-container">
@@ -346,20 +351,15 @@ function App() {
                 followMode={followMode}
                 offsetX={offsetX}
                 offsetY={offsetY}
-                trackPoints={gpxData.trackPoints}
+                trackPoints={gpxData?.trackPoints ?? []}
                 walkedPath={walkedPath}
                 sleeping={sleeping}
                 onSleepClick={handleSleepClick}
                 currentTime={currentTime}
-                navInstruction={{
-                  icon: instr?.icon ?? '↑',
-                  text: instr?.text ?? '',
-                  distText: formatDistance(distanceToNext),
-                  totalDistText: formatDistance(totalRemaining),
-                }}
+                navInstruction={navInstruction}
                 showTrackDots={showTrackDots}
                 showTurnDots={showTurnDots}
-                turns={gpxData.turns}
+                turns={gpxData?.turns ?? []}
               />
             </div>
             <div className="screen-slide">

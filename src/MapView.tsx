@@ -44,7 +44,7 @@ interface MapViewProps {
   sleeping: boolean
   onSleepClick: () => void
   currentTime: Date
-  navInstruction: NavInstruction
+  navInstruction: NavInstruction | null
   showTrackDots: boolean
   showTurnDots: boolean
   turns: TurnInstruction[]
@@ -204,14 +204,16 @@ export function MapView({
       <svg className="pos-svg" xmlns="http://www.w3.org/2000/svg">
         {!sleeping && renderPosition()}
       </svg>
-      <div className="nav-banner">
-        <span className="nav-icon">{navInstruction.icon}</span>
-        <div className="nav-details">
-          <div className="nav-text">{navInstruction.text}</div>
-          <div className="nav-dist">{navInstruction.distText}</div>
-          <div className="nav-total">{navInstruction.totalDistText}</div>
+      {navInstruction && (
+        <div className="nav-banner">
+          <span className="nav-icon">{navInstruction.icon}</span>
+          <div className="nav-details">
+            <div className="nav-text">{navInstruction.text}</div>
+            <div className="nav-dist">{navInstruction.distText}</div>
+            <div className="nav-total">{navInstruction.totalDistText}</div>
+          </div>
         </div>
-      </div>
+      )}
       <div className="zoom-ind">Z{zoom}</div>
       <div className="cache-ind">Cache: {cacheSize}</div>
       <div className="inner-shadow"></div>
@@ -224,10 +226,14 @@ export function MapView({
           {currentTime.getHours().toString().padStart(2, '0')}:
           {currentTime.getMinutes().toString().padStart(2, '0')}
         </div>
-        <div className="sleep-nav-icon">{navInstruction.icon}</div>
-        <div className="nav-hint">{navInstruction.text}</div>
-        <div className="sleep-nav-dist">{navInstruction.distText}</div>
-        <div className="sleep-nav-total">{navInstruction.totalDistText}</div>
+        {navInstruction && (
+          <>
+            <div className="sleep-nav-icon">{navInstruction.icon}</div>
+            <div className="nav-hint">{navInstruction.text}</div>
+            <div className="sleep-nav-dist">{navInstruction.distText}</div>
+            <div className="sleep-nav-total">{navInstruction.totalDistText}</div>
+          </>
+        )}
       </div>
     </>
   )
