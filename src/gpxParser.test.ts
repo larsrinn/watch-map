@@ -200,6 +200,42 @@ const NO_TURNS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
   </trk>
 </gpx>`
 
+const MALFORMED_COORDS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1">
+  <trk>
+    <name>Bad Coords</name>
+    <trkseg>
+      <trkpt lat="50.0" lon="8.0"></trkpt>
+      <trkpt lon="8.1"></trkpt>
+      <trkpt lat="50.2"></trkpt>
+      <trkpt lat="" lon="8.3"></trkpt>
+      <trkpt lat="50.4" lon="8.4"></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`
+
+describe('malformed coordinates', () => {
+  it('filters out points with missing lat attribute', () => {
+    const { trackPoints } = parseGpx(MALFORMED_COORDS_FIXTURE)
+    expect(trackPoints).toEqual([
+      [50.0, 8.0],
+      [50.4, 8.4],
+    ])
+  })
+
+  it('filters out points with missing lon attribute', () => {
+    const { trackPoints } = parseGpx(MALFORMED_COORDS_FIXTURE)
+    // point with lat=50.2 but no lon is excluded
+    expect(trackPoints.find(p => p[0] === 50.2)).toBeUndefined()
+  })
+
+  it('filters out points with empty lat attribute', () => {
+    const { trackPoints } = parseGpx(MALFORMED_COORDS_FIXTURE)
+    // point with lat="" lon="8.3" is excluded
+    expect(trackPoints.find(p => p[1] === 8.3)).toBeUndefined()
+  })
+})
+
 describe('GPX without rte tag (no turn instructions)', () => {
   it('returns empty turns array', () => {
     const { turns } = parseGpx(NO_TURNS_FIXTURE)

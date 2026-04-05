@@ -27,10 +27,12 @@ export function parseGpx(xml: string): ParsedGpx {
 
   const trackPoints: [number, number][] = Array.from(
     doc.querySelectorAll('trkseg > trkpt')
-  ).map(pt => [
-    parseFloat(pt.getAttribute('lat')!),
-    parseFloat(pt.getAttribute('lon')!),
-  ])
+  ).reduce<[number, number][]>((acc, pt) => {
+    const lat = parseFloat(pt.getAttribute('lat') ?? '')
+    const lon = parseFloat(pt.getAttribute('lon') ?? '')
+    if (!Number.isNaN(lat) && !Number.isNaN(lon)) acc.push([lat, lon])
+    return acc
+  }, [])
 
   const turns: TurnInstruction[] = Array.from(
     doc.querySelectorAll('rte > rtept')

@@ -71,9 +71,9 @@
 - ~~`gpxExport.ts:13-14`: `trackName` is interpolated directly into XML. A name containing `<` or `&` produces invalid GPX.~~
 - **Fix applied:** Added `escapeXml` helper in `gpxExport.ts` that escapes `&`, `<`, `>`, `"`, `'`. Tests added in `gpxExport.test.ts`.
 
-### 4b. GPX parser: no validation
-- `gpxParser.ts:40-42`: `parseFloat(pt.getAttribute('lat')!)` — the `!` asserts non-null, but a malformed file without `lat`/`lon` attributes will produce `NaN` coordinates that silently propagate through the entire system.
-- **Mitigation:** Filter out points where `lat` or `lon` is `NaN` after parsing.
+### ~~4b. GPX parser: no validation~~ ✅ RESOLVED
+- ~~`gpxParser.ts:40-42`: `parseFloat(pt.getAttribute('lat')!)` — the `!` asserts non-null, but a malformed file without `lat`/`lon` attributes will produce `NaN` coordinates that silently propagate through the entire system.~~
+- **Fix applied:** Replaced `map` with `reduce` that filters out points where `lat` or `lon` is missing or `NaN`. Removed non-null assertions. Tests added in `gpxParser.test.ts`.
 
 ### 4c. Service Worker has no cache size limit
 - `sw.js`: every fetched tile is cached forever. On a device with limited storage (a watch!), this will eventually fill the cache.
