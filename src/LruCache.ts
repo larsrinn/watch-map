@@ -4,8 +4,11 @@
  */
 export class LruCache<K, V> {
   private map = new Map<K, V>()
+  private readonly capacity: number
 
-  constructor(private readonly capacity: number) {}
+  constructor(capacity: number) {
+    this.capacity = capacity
+  }
 
   get(key: K): V | undefined {
     const value = this.map.get(key)
