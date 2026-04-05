@@ -11,13 +11,15 @@ import type { RecordedPoint } from './types'
 import { preloadTiles } from './tilePreloader'
 import type { PreloadStatus } from './tilePreloader'
 import { exportGpx } from './gpxExport'
-import { formatDistance } from './geo'
+import { formatDistance, shouldRecordPoint } from './geo'
 
 // Constants
 const MIN_ZOOM = 10
 const MAX_ZOOM = 17
 const SLEEP_TIMEOUT = 3000
 const SCREEN_COUNT = 4
+const MIN_RECORD_DISTANCE = 5 // meters — skip GPS fixes closer than this
+const PERSIST_INTERVAL = 30_000 // ms — debounce localStorage writes
 const EMPTY_TRACK_POINTS: [number, number][] = []
 const EMPTY_TURNS: ParsedGpx['turns'] = []
 
@@ -45,7 +47,7 @@ function App() {
   const [offsetX, setOffsetX] = useState(0)
   const [offsetY, setOffsetY] = useState(0)
   const [sleeping, setSleeping] = useState(false)
-  const [walkedPath, setWalkedPath] = useState<RecordedPoint[]>(() => {
+  const [recordedPath, setRecordedPath] = useState<RecordedPoint[]>(() => {
     try {
       const saved = localStorage.getItem('watch-nav-track')
       return saved ? JSON.parse(saved) : []
@@ -103,7 +105,7 @@ function App() {
     setGpxData(parsed)
     setGpxFileName(fileName)
     setIsTracking(false)
-    setWalkedPath([])
+    setRecordedPath([])
     localStorage.removeItem('watch-nav-track')
 
     preloadAbortRef.current?.abort()
@@ -123,7 +125,7 @@ function App() {
 
   const handleStartTrack = useCallback(() => {
     setIsTracking(true)
-    setWalkedPath([])
+    setRecordedPath([])
     localStorage.removeItem('watch-nav-track')
     setCurrentScreen(1)
   }, [])
@@ -138,13 +140,13 @@ function App() {
   }, [])
 
   const handleClear = useCallback(() => {
-    setWalkedPath([])
+    setRecordedPath([])
     localStorage.removeItem('watch-nav-track')
   }, [])
 
   const handleExportGpx = useCallback(() => {
-    if (walkedPath.length === 0) return
-    const content = exportGpx(walkedPath)
+    if (recordedPath.length === 0) return
+    const content = exportGpx(recordedPath)
     const fileName = `track-${new Date().toISOString().slice(0, 10)}.gpx`
     const blob = new Blob([content], { type: 'application/gpx+xml' })
     const url = URL.createObjectURL(blob)
@@ -153,7 +155,7 @@ function App() {
     a.download = fileName
     a.click()
     URL.revokeObjectURL(url)
-  }, [walkedPath])
+  }, [recordedPath])
 
   // Event handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -239,19 +241,37 @@ function App() {
     return () => clearInterval(timer)
   }, [])
 
-  // Accumulate walked path when tracking is active
+  // Accumulate recorded path when tracking is active (min-distance filter)
   useEffect(() => {
     if (!isActive || !isTracking) return
-    setWalkedPath(path => [...path, { lat: position[0], lon: position[1], alt: altitude, ts: Date.now() }])
+    setRecordedPath(path => {
+      const last = path[path.length - 1]
+      if (!shouldRecordPoint(last ? [last.lat, last.lon] : null, position, MIN_RECORD_DISTANCE)) return path
+      return [...path, { lat: position[0], lon: position[1], alt: altitude, ts: Date.now() }]
+    })
     setFollowMode(true)
   }, [position, isActive, isTracking])
 
-  // Persist walked path to localStorage
+  // Persist recorded path to localStorage (debounced + flush on unload)
+  const recordedPathRef = useRef(recordedPath)
   useEffect(() => {
-    if (walkedPath.length > 0) {
-      localStorage.setItem('watch-nav-track', JSON.stringify(walkedPath))
+    recordedPathRef.current = recordedPath
+  }, [recordedPath])
+
+  useEffect(() => {
+    const flush = () => {
+      if (recordedPathRef.current.length > 0) {
+        localStorage.setItem('watch-nav-track', JSON.stringify(recordedPathRef.current))
+      }
     }
-  }, [walkedPath])
+    const timer = setInterval(flush, PERSIST_INTERVAL)
+    window.addEventListener('beforeunload', flush)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('beforeunload', flush)
+      flush()
+    }
+  }, [])
 
   // Turn detection — wake + haptic when crossing a waypoint with a turn instruction
   useEffect(() => {
@@ -328,7 +348,7 @@ function App() {
               <ControlScreen
                 gpxFileName={gpxFileName}
                 isTracking={isTracking}
-                hasTrack={walkedPath.length > 0}
+                hasTrack={recordedPath.length > 0}
                 onGpxLoad={handleGpxLoad}
                 onStartTrack={handleStartTrack}
                 onContinueTrack={handleContinueTrack}
@@ -346,7 +366,7 @@ function App() {
                 offsetX={offsetX}
                 offsetY={offsetY}
                 trackPoints={gpxData?.trackPoints ?? []}
-                walkedPath={walkedPath}
+                recordedPath={recordedPath}
                 sleeping={sleeping}
                 onSleepClick={handleSleepClick}
                 currentTime={currentTime}
@@ -358,7 +378,7 @@ function App() {
             </div>
             <div className="screen-slide">
               <TrackStatsScreen
-                walkedPath={walkedPath}
+                recordedPath={recordedPath}
                 isTracking={isTracking}
               />
             </div>

@@ -39,6 +39,19 @@ export function elevationGain(
 }
 
 /**
+ * Determine whether a new GPS position should be recorded,
+ * based on minimum distance from the last recorded point.
+ */
+export function shouldRecordPoint(
+  lastRecorded: [number, number] | null,
+  current: [number, number],
+  minDistance: number,
+): boolean {
+  if (!lastRecorded) return true
+  return haversine(lastRecorded, current) >= minDistance
+}
+
+/**
  * Format a distance in meters for display.
  * < 100m  → "42 m"
  * < 300m  → "0,23 km" (2 decimals)

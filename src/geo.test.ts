@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { haversine, formatDistance, elevationGain } from './geo'
+import { haversine, formatDistance, elevationGain, shouldRecordPoint } from './geo'
 
 describe('haversine', () => {
   it('returns 0 for identical points', () => {
@@ -115,5 +115,32 @@ describe('elevationGain', () => {
     const naive = [2, 0, 2, 0, 2, 3, 0, 0, 4].reduce((a, b) => a + b, 0) // 13
     const smoothed = elevationGain(flat)
     expect(smoothed).toBeLessThan(naive)
+  })
+})
+
+describe('shouldRecordPoint', () => {
+  it('returns true when there is no last recorded point', () => {
+    expect(shouldRecordPoint(null, [50, 8], 5)).toBe(true)
+  })
+
+  it('returns false when new point is closer than minDistance', () => {
+    // ~1m apart (tiny longitude shift at lat 50)
+    expect(shouldRecordPoint([50, 8], [50, 8.00001], 5)).toBe(false)
+  })
+
+  it('returns true when new point is at least minDistance away', () => {
+    // ~111m apart (0.001° lat ≈ 111m)
+    expect(shouldRecordPoint([50, 8], [50.001, 8], 5)).toBe(true)
+  })
+
+  it('returns true when distance exactly equals minDistance', () => {
+    // Use haversine to find a point exactly at threshold
+    // ~5m is about 0.000045° latitude
+    const result = shouldRecordPoint([0, 0], [0.000045, 0], 5)
+    expect(result).toBe(true)
+  })
+
+  it('returns false for same point', () => {
+    expect(shouldRecordPoint([50, 8], [50, 8], 5)).toBe(false)
   })
 })

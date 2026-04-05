@@ -3,7 +3,7 @@ import type { RecordedPoint } from '../types'
 import { haversine, formatDistance, elevationGain } from '../geo'
 
 interface TrackStatsScreenProps {
-  walkedPath: RecordedPoint[]
+  recordedPath: RecordedPoint[]
   isTracking: boolean
 }
 
@@ -21,8 +21,8 @@ function formatTime(ts: number): string {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
-export function TrackStatsScreen({ walkedPath, isTracking }: TrackStatsScreenProps) {
-  if (walkedPath.length === 0) {
+export function TrackStatsScreen({ recordedPath, isTracking }: TrackStatsScreenProps) {
+  if (recordedPath.length === 0) {
     return (
       <div className="stats-screen">
         <div className="stats-empty">
@@ -32,19 +32,19 @@ export function TrackStatsScreen({ walkedPath, isTracking }: TrackStatsScreenPro
     )
   }
 
-  const first = walkedPath[0]
-  const last = walkedPath[walkedPath.length - 1]
+  const first = recordedPath[0]
+  const last = recordedPath[recordedPath.length - 1]
 
-  const distance = walkedPath.reduce((sum, pt, i) => {
+  const distance = recordedPath.reduce((sum, pt, i) => {
     if (i === 0) return 0
-    const prev = walkedPath[i - 1]
+    const prev = recordedPath[i - 1]
     return sum + haversine([prev.lat, prev.lon], [pt.lat, pt.lon])
   }, 0)
 
   const duration = last.ts - first.ts
 
-  const hasAlt = walkedPath.some(p => p.alt !== null)
-  const elevGain = hasAlt ? elevationGain(walkedPath.map(p => p.alt)) : null
+  const hasAlt = recordedPath.some(p => p.alt !== null)
+  const elevGain = hasAlt ? elevationGain(recordedPath.map(p => p.alt)) : null
 
   return (
     <div className="stats-screen">

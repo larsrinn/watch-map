@@ -40,7 +40,7 @@ interface MapViewProps {
   offsetX: number
   offsetY: number
   trackPoints: [number, number][]
-  walkedPath: RecordedPoint[]
+  recordedPath: RecordedPoint[]
   sleeping: boolean
   onSleepClick: () => void
   currentTime: Date
@@ -57,7 +57,7 @@ export function MapView({
   offsetX,
   offsetY,
   trackPoints,
-  walkedPath,
+  recordedPath,
   sleeping,
   onSleepClick,
   currentTime,
@@ -151,7 +151,7 @@ export function MapView({
     })
     const trackD = trackPts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
 
-    const walked = walkedPath.map(({ lat, lon }) => {
+    const walked = recordedPath.map(({ lat, lon }) => {
       const p = latLonPx(lat, lon, zoom)
       return { x: p.x - c.x + HALF, y: p.y - c.y + HALF }
     })
@@ -179,7 +179,7 @@ export function MapView({
         })}
       </>
     )
-  }, [getCenter, zoom, trackPoints, walkedPath, showTrackDots, showTurnDots, turns])
+  }, [getCenter, zoom, trackPoints, recordedPath, showTrackDots, showTurnDots, turns])
 
   const renderPosition = useCallback(() => {
     const c = getCenter()

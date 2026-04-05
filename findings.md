@@ -13,10 +13,10 @@
 - ~~These will produce inconsistent display for the same distance.~~
 - **Fix applied:** Extracted to shared `src/geo.ts` (3-tier format with `toLocaleString`). Both `App.tsx` and `TrackStatsScreen.tsx` now import from there. Tests added in `src/geo.test.ts`.
 
-### 1c. Walked path records every GPS fix — unbounded array growth
-- `App.tsx:251`: every `watchPosition` callback appends to `walkedPath`, then the entire array is serialized to `localStorage` (`App.tsx:258`).
-- On a multi-hour hike with 1 Hz GPS, that's ~10k+ points. `JSON.stringify` + `localStorage.setItem` on every single fix will cause increasing jank and eventually hit the ~5 MB `localStorage` quota, silently losing data.
-- **Mitigation:** (a) Throttle recording (e.g. every 3s or min-distance filter). (b) Batch `localStorage` writes (e.g. every 30s via a debounced effect). (c) Consider IndexedDB for larger capacity.
+### ~~1c. Walked path records every GPS fix — unbounded array growth~~ ✅ RESOLVED
+- ~~`App.tsx:251`: every `watchPosition` callback appends to `walkedPath`, then the entire array is serialized to `localStorage` (`App.tsx:258`).~~
+- ~~On a multi-hour hike with 1 Hz GPS, that's ~10k+ points. `JSON.stringify` + `localStorage.setItem` on every single fix will cause increasing jank and eventually hit the ~5 MB `localStorage` quota, silently losing data.~~
+- **Fix applied:** (a) Renamed `walkedPath` → `recordedPath` (app isn't walking-only). (b) Added min-distance filter (5m) via `shouldRecordPoint()` in `geo.ts` — skips GPS fixes too close to the last recorded point, capping array growth. (c) Debounced `localStorage` writes to every 30s (with flush on `beforeunload` and effect cleanup). Tests added in `geo.test.ts`.
 
 ### ~~1d. `distToNextTurn` computed in `gpxParser.ts` but never used~~ ✅ RESOLVED
 - ~~`gpxParser.ts:60-68` builds the `distToNextTurn` array and returns it in `ParsedGpx`, but no consumer ever reads it. The navigation distance is computed independently in `mapMatcher.ts`. Dead code.~~
@@ -51,9 +51,9 @@
 
 ## 3. PERFORMANCE ISSUES
 
-### 3a. `localStorage` write on every GPS fix
-- As noted above, `JSON.stringify` of a growing array on every position update is expensive and synchronous — it blocks the main thread.
-- **Mitigation:** Debounce to every ~30 seconds.
+### ~~3a. `localStorage` write on every GPS fix~~ ✅ RESOLVED
+- ~~As noted above, `JSON.stringify` of a growing array on every position update is expensive and synchronous — it blocks the main thread.~~
+- **Fix applied:** Debounced to every 30 seconds via `setInterval` + ref, with flush on `beforeunload` and effect cleanup (see 1c fix).
 
 ### 3b. Global search in `mapMatcher.updatePosition`
 - `mapMatcher.ts:108-116`: iterates *all* track points to find the global best on every fix. For a 10,000-point track, that's 10k haversine calls per second.
@@ -101,7 +101,7 @@
 
 | Priority | Issue | Impact |
 |---|---|---|
-| **High** | Unbounded `walkedPath` + sync `localStorage` on every fix | App jank/crash on long tracks |
+| ~~**High**~~ | ~~Unbounded `walkedPath` + sync `localStorage` on every fix~~ ✅ | ~~App jank/crash on long tracks~~ |
 | **High** | O(n) global search per GPS fix in map matcher | Battery drain, jank on long routes |
 | ~~**High**~~ | ~~`[]` fallback creating new array identity, restarting GPS watcher~~ ✅ | ~~GPS watcher restarts every render when no GPX loaded~~ |
 | ~~**Medium**~~ | ~~No XML escaping in GPX export~~ ✅ | ~~Corrupted export files~~ |
