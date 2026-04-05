@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import './ControlScreen.css'
+import { Button } from './Button'
 import type { PreloadStatus } from '../tilePreloader'
 
 interface ControlScreenProps {
@@ -34,7 +35,7 @@ export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, on
     if (preloadStatus.phase === 'idle') return null
     if (preloadStatus.phase === 'running') {
       const { done, total } = preloadStatus
-      if (total === 0) return <div className="preload-status">Caching&hellip;</div>
+      if (total === 0) return <div className="preload-status">Wird gecacht&hellip;</div>
       const pct = Math.round((done / total) * 100)
       return (
         <div className="preload-status">
@@ -46,9 +47,9 @@ export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, on
       )
     }
     if (preloadStatus.phase === 'done') {
-      return <div className="preload-status done">&#10003; Offline ready ({preloadStatus.cached})</div>
+      return <div className="preload-status done">&#10003; Offline bereit ({preloadStatus.cached})</div>
     }
-    return <div className="preload-status error">Cache failed</div>
+    return <div className="preload-status error">Cache fehlgeschlagen</div>
   })()
 
   return (
@@ -62,41 +63,41 @@ export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, on
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
-      <button className="btn control-btn" style={{ background: '#2980b9' }} onClick={() => fileInputRef.current?.click()}>
-        Pick GPX
-      </button>
+      <Button variant="primary" className="control-btn" onClick={() => fileInputRef.current?.click()}>
+        GPX laden
+      </Button>
       {isTracking ? (
         <>
-          <button className="btn control-btn" style={{ background: '#555' }} disabled>
-            Tracking...
-          </button>
-          <button className="btn control-btn" style={{ background: '#c0392b' }} onClick={onStop}>
-            Stop
-          </button>
+          <Button variant="neutral" className="control-btn" disabled>
+            Aufzeichnung...
+          </Button>
+          <Button variant="danger" className="control-btn" onClick={onStop}>
+            Stopp
+          </Button>
         </>
       ) : hasTrack ? (
         <>
-          <button className="btn control-btn" style={{ background: '#27ae60' }} onClick={onContinueTrack}>
-            Continue
-          </button>
-          <button className="btn control-btn" style={{ background: '#555' }} onClick={onStartTrack}>
-            New Track
-          </button>
-          <button className="btn control-btn" style={{ background: '#555' }} onClick={onClear}>
-            Clear
-          </button>
-          <button className="btn control-btn" style={{ background: '#2980b9' }} onClick={onExportGpx}>
-            Export GPX
-          </button>
+          <Button variant="success" className="control-btn" onClick={onContinueTrack}>
+            Fortsetzen
+          </Button>
+          <Button variant="neutral" className="control-btn" onClick={onStartTrack}>
+            Neuer Track
+          </Button>
+          <Button variant="neutral" className="control-btn" onClick={onClear}>
+            Löschen
+          </Button>
+          <Button variant="primary" className="control-btn" onClick={onExportGpx}>
+            GPX Export
+          </Button>
         </>
       ) : (
         <>
-          <button className="btn control-btn" style={{ background: '#27ae60' }} onClick={onStartTrack}>
-            Start Track
-          </button>
-          <button className="btn control-btn" style={{ background: '#555' }} disabled>
-            Stop
-          </button>
+          <Button variant="success" className="control-btn" onClick={onStartTrack}>
+            Track starten
+          </Button>
+          <Button variant="neutral" className="control-btn" disabled>
+            Stopp
+          </Button>
         </>
       )}
     </div>

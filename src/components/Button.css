@@ -1,0 +1,15 @@
+.btn--primary {
+  background: #2980b9;
+}
+
+.btn--success {
+  background: #27ae60;
+}
+
+.btn--danger {
+  background: #c0392b;
+}
+
+.btn--neutral {
+  background: #555;
+}

@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
           padding: 16,
           textAlign: 'center',
         }}>
-          <p style={{ fontSize: 14, marginBottom: 8 }}>Something went wrong</p>
+          <p style={{ fontSize: 14, marginBottom: 8 }}>Etwas ist schiefgelaufen</p>
           <button
             onClick={() => this.setState({ error: null })}
             style={{
@@ -47,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
               fontSize: 12,
             }}
           >
-            Retry
+            Erneut versuchen
           </button>
         </div>
       )

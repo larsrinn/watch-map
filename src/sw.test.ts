@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // Test the trimCache logic by re-implementing against mocked Cache API
 // (sw.js is a plain JS service worker, so we test the core eviction logic here)

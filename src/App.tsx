@@ -5,6 +5,7 @@ import { ControlScreen } from './components/ControlScreen'
 import { TrackStatsScreen } from './components/TrackStatsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { Button } from './components/Button'
 import { useSleepWake } from './hooks/useSleepWake'
 import { useMapInteraction } from './hooks/useMapInteraction'
 import { useTrackRecording } from './hooks/useTrackRecording'
@@ -169,7 +170,7 @@ function App() {
       <div className="legend">
         <div className="legend-item">
           <div className="legend-line" style={{ background: '#3498db' }}></div>
-          Track
+          Strecke
         </div>
         <div className="legend-item">
           <div className="legend-line" style={{ background: '#e74c3c' }}></div>
@@ -182,15 +183,15 @@ function App() {
       </div>
 
       <div className="controls">
-        <button className="btn" style={{ background: '#2980b9' }} onClick={recenter}>
+        <Button variant="primary" onClick={recenter}>
           Zentrieren
-        </button>
-        <button className="btn" style={{ background: '#555' }} onClick={() => changeZoom(1)}>
+        </Button>
+        <Button variant="neutral" onClick={() => changeZoom(1)}>
           +
-        </button>
-        <button className="btn" style={{ background: '#555' }} onClick={() => changeZoom(-1)}>
+        </Button>
+        <Button variant="neutral" onClick={() => changeZoom(-1)}>
           −
-        </button>
+        </Button>
       </div>
 
       <div className="hint">

@@ -35,8 +35,8 @@ describe('ErrorBoundary', () => {
       createElement(ErrorBoundary, null,
         createElement(Thrower, { shouldThrow: true }))
     )
-    expect(container.textContent).toContain('Something went wrong')
-    expect(container.querySelector('button')?.textContent).toBe('Retry')
+    expect(container.textContent).toContain('Etwas ist schiefgelaufen')
+    expect(container.querySelector('button')?.textContent).toBe('Erneut versuchen')
   })
 
   it('renders custom fallback when provided', () => {
@@ -53,7 +53,7 @@ describe('ErrorBoundary', () => {
       createElement(ErrorBoundary, null,
         createElement(Thrower, { shouldThrow: true }))
     )
-    expect(container.textContent).toContain('Something went wrong')
+    expect(container.textContent).toContain('Etwas ist schiefgelaufen')
 
     // Re-render with non-throwing child before clicking retry
     act(() => {

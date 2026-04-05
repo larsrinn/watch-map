@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, memo, type ReactElement } from 'react'
+import { useState, useRef, useCallback, useMemo, memo, Fragment, type ReactElement } from 'react'
 import type { RecordedPoint } from './types'
 import type { TurnInstruction } from './gpxParser'
 import { LruCache } from './LruCache'
@@ -26,6 +26,7 @@ const MAX_TILE_CACHE = 150
 
 interface TileEntry {
   img: HTMLImageElement
+  failed: boolean
 }
 
 export interface NavInstruction {
@@ -55,21 +56,22 @@ export const TileLayer = memo(function TileLayer({ zoom, center }: TileLayerProp
   const [renderKey, setRenderKey] = useState(0)
   const tileCacheRef = useRef(new LruCache<string, TileEntry>(MAX_TILE_CACHE))
 
-  const loadTile = useCallback((z: number, x: number, y: number): HTMLImageElement => {
+  const loadTile = useCallback((z: number, x: number, y: number): TileEntry => {
     const key = `${z}/${x}/${y}`
     const cache = tileCacheRef.current
 
     const cached = cache.get(key)
-    if (cached) return cached.img
+    if (cached) return cached
 
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
+    const entry: TileEntry = { img, failed: false }
     img.onload = () => setRenderKey(k => k + 1)
-    img.onerror = () => { (img as HTMLImageElement & { _failed: boolean })._failed = true }
+    img.onerror = () => { entry.failed = true }
 
-    cache.set(key, { img })
-    return img
+    cache.set(key, entry)
+    return entry
   }, [])
 
   const tiles: ReactElement[] = []
@@ -90,12 +92,12 @@ export const TileLayer = memo(function TileLayer({ zoom, center }: TileLayerProp
       const py = oY + dy * TILE_SIZE
       if (px + TILE_SIZE < 0 || px > W || py + TILE_SIZE < 0 || py > W) continue
 
-      const cached = loadTile(zoom, tx, ty)
-      if (cached && cached.complete && !(cached as HTMLImageElement & { _failed?: boolean })._failed) {
+      const entry = loadTile(zoom, tx, ty)
+      if (entry.img.complete && !entry.failed) {
         tiles.push(
           <img
             key={`${zoom}-${tx}-${ty}`}
-            src={cached.src}
+            src={entry.img.src}
             width={TILE_SIZE}
             height={TILE_SIZE}
             style={{ left: px + 'px', top: py + 'px' }}
@@ -105,9 +107,8 @@ export const TileLayer = memo(function TileLayer({ zoom, center }: TileLayerProp
       }
     }
   }
-  // renderKey is read here to trigger re-renders when tiles load
-  void renderKey
-  return <>{tiles}</>
+  // renderKey as fragment key ensures React re-renders when tiles finish loading
+  return <Fragment key={renderKey}>{tiles}</Fragment>
 })
 
 interface MapViewProps {
@@ -222,7 +223,6 @@ export function MapView({
         </div>
       )}
       <div className="zoom-ind">Z{zoom}</div>
-      <div className="cache-ind"></div>
       <div className="inner-shadow"></div>
       <div
         className="sleep-overlay"

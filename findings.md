@@ -87,13 +87,13 @@
 
 ## 5. MINOR / STYLE
 
-| Issue | Location | Note |
-|---|---|---|
-| `_failed` property added via type assertion hack | `MapView.tsx:87,126` | Use a `Map<string, 'loading'\|'loaded'\|'failed'>` instead |
-| `void renderKey` to "use" a variable | `MapView.tsx:141` | Fragile — move `renderKey` into the dependency array comment or restructure |
-| Inline styles on every button | `ControlScreen.tsx`, `App.tsx` | Use CSS classes for maintainability |
-| Mixed German/English UI labels | Throughout | Inconsistent UX — pick one language |
-| `cacheSize` state in MapView only used for display | `MapView.tsx:70,96` | Updating state on every tile miss causes unnecessary re-renders |
+| Issue | Location | Note | Status |
+|---|---|---|---|
+| ~~`_failed` property added via type assertion hack~~ | ~~`MapView.tsx:87,126`~~ | ~~Use a `Map<string, 'loading'\|'loaded'\|'failed'>` instead~~ | ✅ RESOLVED — `TileEntry.failed` boolean replaces type assertion hack |
+| ~~`void renderKey` to "use" a variable~~ | ~~`MapView.tsx:141`~~ | ~~Fragile — move `renderKey` into the dependency array comment or restructure~~ | ✅ RESOLVED — `renderKey` used as `Fragment key` to trigger re-renders |
+| ~~Inline styles on every button~~ | ~~`ControlScreen.tsx`, `App.tsx`~~ | ~~Use CSS classes for maintainability~~ | ✅ RESOLVED — Extracted reusable `Button` component with CSS variant classes (`primary`, `success`, `danger`, `neutral`) |
+| ~~Mixed German/English UI labels~~ | ~~Throughout~~ | ~~Inconsistent UX — pick one language~~ | ✅ RESOLVED — All UI labels translated to German |
+| ~~`cacheSize` state in MapView only used for display~~ | ~~`MapView.tsx:70,96`~~ | ~~Updating state on every tile miss causes unnecessary re-renders~~ | ✅ RESOLVED — Removed empty `cache-ind` div and unused CSS rule |
 
 ---
 

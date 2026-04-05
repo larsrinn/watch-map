@@ -22,7 +22,6 @@ beforeEach(() => {
     src = ''
     crossOrigin = ''
     complete = false
-    _failed = false
     onload: (() => void) | null = null
     onerror: (() => void) | null = null
 
@@ -109,8 +108,8 @@ const baseMapViewProps = {
   offsetY: 0,
   trackPoints: [[48.1, 11.5], [48.101, 11.501], [48.102, 11.502]] as [number, number][],
   recordedPath: [
-    { lat: 48.1, lon: 11.5, alt: 500, time: Date.now() },
-    { lat: 48.101, lon: 11.501, alt: 501, time: Date.now() },
+    { lat: 48.1, lon: 11.5, alt: 500, ts: Date.now() },
+    { lat: 48.101, lon: 11.501, alt: 501, ts: Date.now() },
   ],
   sleeping: false,
   onSleepClick: () => {},
