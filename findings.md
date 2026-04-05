@@ -43,9 +43,9 @@
 - ~~`MapView.tsx:91-93`: sorts all 150+ entries on every new tile load to evict 30%. Sorting is O(n log n) per tile miss.~~
 - **Fix applied:** Extracted a generic `LruCache` class (`src/LruCache.ts`) backed by Map insertion order. On access, entries are moved to the end; eviction removes from the front in O(1). MapView's tile cache now uses `LruCache` instead of manual sort-and-slice. Tests added in `LruCache.test.ts`.
 
-### 2d. No error boundary
-- A parsing error in a malformed GPX, or a runtime error in map rendering, will crash the entire app with no recovery.
-- **Mitigation:** Add a React error boundary at least around `MapView`.
+### ~~2d. No error boundary~~ ✅ RESOLVED
+- ~~A parsing error in a malformed GPX, or a runtime error in map rendering, will crash the entire app with no recovery.~~
+- **Fix applied:** Added `ErrorBoundary` class component (`src/components/ErrorBoundary.tsx`) wrapping `MapView` in `App.tsx`. Shows a fallback UI with a retry button on crash. Supports custom fallback via prop. Tests added in `ErrorBoundary.test.tsx`.
 
 ---
 
@@ -107,7 +107,7 @@
 | ~~**Medium**~~ | ~~No XML escaping in GPX export~~ ✅ | ~~Corrupted export files~~ |
 | **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
-| **Medium** | No error boundary | Unrecoverable crash on bad input |
+| ~~**Medium**~~ | ~~No error boundary~~ ✅ | ~~Unrecoverable crash on bad input~~ |
 | ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (both extracted to `geo.ts`) | ~~Divergence risk~~ |
 | ~~**Low**~~ | ~~Unsmoothed elevation gain~~ ✅ | ~~Inaccurate stats~~ |
 | **Low** | Unbounded SW tile cache | Storage exhaustion over time |

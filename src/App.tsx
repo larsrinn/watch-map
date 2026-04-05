@@ -12,6 +12,7 @@ import { preloadTiles } from './tilePreloader'
 import type { PreloadStatus } from './tilePreloader'
 import { exportGpx } from './gpxExport'
 import { formatDistance, shouldRecordPoint } from './geo'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Constants
 const MIN_ZOOM = 10
@@ -359,22 +360,24 @@ function App() {
               />
             </div>
             <div className="screen-slide">
-              <MapView
-                zoom={zoom}
-                currentPosition={position}
-                followMode={followMode}
-                offsetX={offsetX}
-                offsetY={offsetY}
-                trackPoints={gpxData?.trackPoints ?? []}
-                recordedPath={recordedPath}
-                sleeping={sleeping}
-                onSleepClick={handleSleepClick}
-                currentTime={currentTime}
-                navInstruction={navInstruction}
-                showTrackDots={showTrackDots}
-                showTurnDots={showTurnDots}
-                turns={gpxData?.turns ?? []}
-              />
+              <ErrorBoundary>
+                <MapView
+                  zoom={zoom}
+                  currentPosition={position}
+                  followMode={followMode}
+                  offsetX={offsetX}
+                  offsetY={offsetY}
+                  trackPoints={gpxData?.trackPoints ?? []}
+                  recordedPath={recordedPath}
+                  sleeping={sleeping}
+                  onSleepClick={handleSleepClick}
+                  currentTime={currentTime}
+                  navInstruction={navInstruction}
+                  showTrackDots={showTrackDots}
+                  showTurnDots={showTurnDots}
+                  turns={gpxData?.turns ?? []}
+                />
+              </ErrorBoundary>
             </div>
             <div className="screen-slide">
               <TrackStatsScreen
