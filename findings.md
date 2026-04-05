@@ -59,9 +59,9 @@
 - ~~`mapMatcher.ts:108-116`: iterates *all* track points to find the global best on every fix. For a 10,000-point track, that's 10k haversine calls per second.~~
 - **Fix applied:** Built a grid-based spatial index at construction time (0.01° cells ≈ ~1km). Global nearest-point search now only checks the 9 neighboring grid cells instead of all N track points. Tests added in `mapMatcher.test.ts`.
 
-### 3c. `renderKey` hack forces full MapView re-render
-- `MapView.tsx:86`: `setRenderKey(k => k + 1)` on every tile load triggers a state change, which re-renders the entire MapView including all SVG path projections. This means loading 50 tiles = 50 complete re-renders.
-- **Mitigation:** Use a canvas-based tile renderer, or at minimum split tile rendering into its own component so SVG track rendering isn't coupled to tile loading state.
+### ~~3c. `renderKey` hack forces full MapView re-render~~ ✅ RESOLVED
+- ~~`MapView.tsx:86`: `setRenderKey(k => k + 1)` on every tile load triggers a state change, which re-renders the entire MapView including all SVG path projections. This means loading 50 tiles = 50 complete re-renders.~~
+- **Fix applied:** Extracted tile rendering into a separate `TileLayer` component (`memo`-wrapped) so that `renderKey` state changes only re-render the tile layer — SVG track and position rendering are no longer affected by tile loads. Tests added in `MapView.test.tsx`.
 
 ---
 
@@ -105,7 +105,7 @@
 | ~~**High**~~ | ~~O(n) global search per GPS fix in map matcher~~ ✅ | ~~Battery drain, jank on long routes~~ |
 | ~~**High**~~ | ~~`[]` fallback creating new array identity, restarting GPS watcher~~ ✅ | ~~GPS watcher restarts every render when no GPX loaded~~ |
 | ~~**Medium**~~ | ~~No XML escaping in GPX export~~ ✅ | ~~Corrupted export files~~ |
-| **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |
+| ~~**Medium**~~ | ~~Tile `renderKey` re-renders entire MapView per tile load~~ ✅ | ~~Sluggish map during tile loading~~ |
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
 | ~~**Medium**~~ | ~~No error boundary~~ ✅ | ~~Unrecoverable crash on bad input~~ |
 | ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (both extracted to `geo.ts`) | ~~Divergence risk~~ |

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type ReactElement } from 'react'
+import { useState, useRef, useCallback, memo, type ReactElement } from 'react'
 import type { RecordedPoint } from './types'
 import type { TurnInstruction } from './gpxParser'
 import { LruCache } from './LruCache'
@@ -35,6 +35,81 @@ export interface NavInstruction {
   totalDistText: string
 }
 
+interface CenterPoint {
+  x: number
+  y: number
+}
+
+function getCenter(currentPosition: [number, number], zoom: number, followMode: boolean, offsetX: number, offsetY: number): CenterPoint {
+  const c = latLonPx(currentPosition[0], currentPosition[1], zoom)
+  return { x: c.x + (followMode ? 0 : offsetX), y: c.y + (followMode ? 0 : offsetY) }
+}
+
+// TileLayer — isolated component so tile-load re-renders don't affect track/position SVGs
+interface TileLayerProps {
+  zoom: number
+  center: CenterPoint
+}
+
+export const TileLayer = memo(function TileLayer({ zoom, center }: TileLayerProps) {
+  const [renderKey, setRenderKey] = useState(0)
+  const tileCacheRef = useRef(new LruCache<string, TileEntry>(MAX_TILE_CACHE))
+
+  const loadTile = useCallback((z: number, x: number, y: number): HTMLImageElement => {
+    const key = `${z}/${x}/${y}`
+    const cache = tileCacheRef.current
+
+    const cached = cache.get(key)
+    if (cached) return cached.img
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
+    img.onload = () => setRenderKey(k => k + 1)
+    img.onerror = () => { (img as HTMLImageElement & { _failed: boolean })._failed = true }
+
+    cache.set(key, { img })
+    return img
+  }, [])
+
+  const tiles: ReactElement[] = []
+  const needed = Math.ceil(W / TILE_SIZE) + 2
+  const half = Math.floor(needed / 2)
+  const ctX = Math.floor(center.x / TILE_SIZE)
+  const ctY = Math.floor(center.y / TILE_SIZE)
+  const oX = HALF - (center.x - ctX * TILE_SIZE)
+  const oY = HALF - (center.y - ctY * TILE_SIZE)
+  const maxT = 1 << zoom
+
+  for (let dx = -half; dx <= half; dx++) {
+    for (let dy = -half; dy <= half; dy++) {
+      const ty = ctY + dy
+      if (ty < 0 || ty >= maxT) continue
+      const tx = ((ctX + dx) % maxT + maxT) % maxT
+      const px = oX + dx * TILE_SIZE
+      const py = oY + dy * TILE_SIZE
+      if (px + TILE_SIZE < 0 || px > W || py + TILE_SIZE < 0 || py > W) continue
+
+      const cached = loadTile(zoom, tx, ty)
+      if (cached && cached.complete && !(cached as HTMLImageElement & { _failed?: boolean })._failed) {
+        tiles.push(
+          <img
+            key={`${zoom}-${tx}-${ty}`}
+            src={cached.src}
+            width={TILE_SIZE}
+            height={TILE_SIZE}
+            style={{ left: px + 'px', top: py + 'px' }}
+            alt=""
+          />
+        )
+      }
+    }
+  }
+  // renderKey is read here to trigger re-renders when tiles load
+  void renderKey
+  return <>{tiles}</>
+})
+
 interface MapViewProps {
   zoom: number
   currentPosition: [number, number]
@@ -68,83 +143,18 @@ export function MapView({
   showTurnDots,
   turns,
 }: MapViewProps) {
-  const [renderKey, setRenderKey] = useState(0)
-  const tileCacheRef = useRef(new LruCache<string, TileEntry>(MAX_TILE_CACHE))
-
-  const loadTile = useCallback((z: number, x: number, y: number): HTMLImageElement => {
-    const key = `${z}/${x}/${y}`
-    const cache = tileCacheRef.current
-
-    const cached = cache.get(key)
-    if (cached) return cached.img
-
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
-    img.onload = () => setRenderKey(k => k + 1)
-    img.onerror = () => { (img as HTMLImageElement & { _failed: boolean })._failed = true }
-
-    cache.set(key, { img })
-    return img
-  }, [])
-
-  const getCenter = useCallback(() => {
-    const c = latLonPx(currentPosition[0], currentPosition[1], zoom)
-    return { x: c.x + (followMode ? 0 : offsetX), y: c.y + (followMode ? 0 : offsetY) }
-  }, [currentPosition, zoom, followMode, offsetX, offsetY])
-
-  const renderTiles = useCallback(() => {
-    const c = getCenter()
-    const tiles: ReactElement[] = []
-    const needed = Math.ceil(W / TILE_SIZE) + 2
-    const half = Math.floor(needed / 2)
-    const ctX = Math.floor(c.x / TILE_SIZE)
-    const ctY = Math.floor(c.y / TILE_SIZE)
-    const oX = HALF - (c.x - ctX * TILE_SIZE)
-    const oY = HALF - (c.y - ctY * TILE_SIZE)
-    const maxT = 1 << zoom
-
-    for (let dx = -half; dx <= half; dx++) {
-      for (let dy = -half; dy <= half; dy++) {
-        const ty = ctY + dy
-        if (ty < 0 || ty >= maxT) continue
-        const tx = ((ctX + dx) % maxT + maxT) % maxT
-        const px = oX + dx * TILE_SIZE
-        const py = oY + dy * TILE_SIZE
-        if (px + TILE_SIZE < 0 || px > W || py + TILE_SIZE < 0 || py > W) continue
-
-        const cached = loadTile(zoom, tx, ty)
-        if (cached && cached.complete && !(cached as HTMLImageElement & { _failed?: boolean })._failed) {
-          tiles.push(
-            <img
-              key={`${zoom}-${tx}-${ty}`}
-              src={cached.src}
-              width={TILE_SIZE}
-              height={TILE_SIZE}
-              style={{ left: px + 'px', top: py + 'px' }}
-              alt=""
-            />
-          )
-        }
-      }
-    }
-    // renderKey is read here to trigger re-renders when tiles load
-    void renderKey
-    return tiles
-  }, [getCenter, zoom, loadTile, renderKey])
+  const center = getCenter(currentPosition, zoom, followMode, offsetX, offsetY)
 
   const renderTrack = useCallback(() => {
-    const c = getCenter()
-
     const trackPts = trackPoints.map(([lat, lon]) => {
       const p = latLonPx(lat, lon, zoom)
-      return { x: p.x - c.x + HALF, y: p.y - c.y + HALF }
+      return { x: p.x - center.x + HALF, y: p.y - center.y + HALF }
     })
     const trackD = trackPts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
 
     const walked = recordedPath.map(({ lat, lon }) => {
       const p = latLonPx(lat, lon, zoom)
-      return { x: p.x - c.x + HALF, y: p.y - c.y + HALF }
+      return { x: p.x - center.x + HALF, y: p.y - center.y + HALF }
     })
     const walkedD = walked.length > 1
       ? walked.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
@@ -170,13 +180,12 @@ export function MapView({
         })}
       </>
     )
-  }, [getCenter, zoom, trackPoints, recordedPath, showTrackDots, showTurnDots, turns])
+  }, [center, zoom, trackPoints, recordedPath, showTrackDots, showTurnDots, turns])
 
   const renderPosition = useCallback(() => {
-    const c = getCenter()
     const p = latLonPx(currentPosition[0], currentPosition[1], zoom)
-    const x = p.x - c.x + HALF
-    const y = p.y - c.y + HALF
+    const x = p.x - center.x + HALF
+    const y = p.y - center.y + HALF
 
     return (
       <>
@@ -184,11 +193,11 @@ export function MapView({
         <circle cx={x} cy={y} r="5" fill="#007AFF" stroke="#fff" strokeWidth="2" />
       </>
     )
-  }, [getCenter, currentPosition, zoom])
+  }, [center, currentPosition, zoom])
 
   return (
     <>
-      <div id="tiles">{!sleeping && renderTiles()}</div>
+      <div id="tiles">{!sleeping && <TileLayer zoom={zoom} center={center} />}</div>
       <svg className="track-svg" xmlns="http://www.w3.org/2000/svg">
         {!sleeping && renderTrack()}
       </svg>
@@ -206,7 +215,7 @@ export function MapView({
         </div>
       )}
       <div className="zoom-ind">Z{zoom}</div>
-      <div className="cache-ind">Cache: {tileCacheRef.current.size}</div>
+      <div className="cache-ind"></div>
       <div className="inner-shadow"></div>
       <div
         className="sleep-overlay"
