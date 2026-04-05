@@ -4,13 +4,10 @@ export interface TurnInstruction {
   icon: string
 }
 
-import { haversine } from './geo'
-
 export interface ParsedGpx {
   name: string
   trackPoints: [number, number][]
   turns: TurnInstruction[]
-  distToNextTurn: number[]
 }
 
 const TURN_ICON: Record<string, string> = {
@@ -49,16 +46,5 @@ export function parseGpx(xml: string): ParsedGpx {
     return { idx, text: desc, icon }
   })
 
-  const n = trackPoints.length
-  const distToNextTurn = new Array<number>(n).fill(0)
-  const turnSet = new Set(turns.map(t => t.idx))
-  for (let i = n - 2; i >= 0; i--) {
-    if (turnSet.has(i)) {
-      distToNextTurn[i] = 0
-    } else {
-      distToNextTurn[i] = haversine(trackPoints[i], trackPoints[i + 1]) + distToNextTurn[i + 1]
-    }
-  }
-
-  return { name, trackPoints, turns, distToNextTurn }
+  return { name, trackPoints, turns }
 }

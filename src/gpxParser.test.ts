@@ -2,15 +2,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseGpx } from './gpxParser'
 
-function haversine(a: [number, number], b: [number, number]): number {
-  const R = 6371000
-  const r = Math.PI / 180
-  const dLat = (b[0] - a[0]) * r
-  const dLon = (b[1] - a[1]) * r
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s))
-}
-
 const MAIN_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1">
   <rte>
@@ -170,27 +161,6 @@ const DIST_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
   </trk>
 </gpx>`
 
-describe('distToNextTurn precomputation', () => {
-  it('turn points themselves get distance 0', () => {
-    const { distToNextTurn } = parseGpx(DIST_FIXTURE)
-    expect(distToNextTurn[0]).toBe(0)  // start turn
-    expect(distToNextTurn[3]).toBe(0)  // right turn
-    expect(distToNextTurn[4]).toBe(0)  // last point
-  })
-
-  it('point before a turn gets one segment distance', () => {
-    const { trackPoints, distToNextTurn } = parseGpx(DIST_FIXTURE)
-    const expected = haversine(trackPoints[2], trackPoints[3])
-    expect(distToNextTurn[2]).toBeCloseTo(expected, 0)
-  })
-
-  it('two points before a turn accumulates two segments', () => {
-    const { trackPoints, distToNextTurn } = parseGpx(DIST_FIXTURE)
-    const expected = haversine(trackPoints[1], trackPoints[2]) + haversine(trackPoints[2], trackPoints[3])
-    expect(distToNextTurn[1]).toBeCloseTo(expected, 0)
-  })
-})
-
 describe('next turn instruction lookup', () => {
   it('returns next upcoming turn when approaching it', () => {
     const { turns } = parseGpx(DIST_FIXTURE)
@@ -242,37 +212,5 @@ describe('GPX without rte tag (no turn instructions)', () => {
     expect(trackPoints[0]).toEqual([50.0, 8.0])
   })
 
-  it('distToNextTurn contains cumulative distance-to-end values', () => {
-    const { trackPoints, distToNextTurn } = parseGpx(NO_TURNS_FIXTURE)
-    expect(distToNextTurn).toHaveLength(3)
-    // Last point: 0
-    expect(distToNextTurn[2]).toBe(0)
-    // Second-to-last: one segment
-    expect(distToNextTurn[1]).toBeCloseTo(haversine(trackPoints[1], trackPoints[2]), 0)
-    // First: two segments (distance to end)
-    const expected = haversine(trackPoints[0], trackPoints[1]) + haversine(trackPoints[1], trackPoints[2])
-    expect(distToNextTurn[0]).toBeCloseTo(expected, 0)
-  })
 })
 
-describe('runtime distance formula', () => {
-  it('gives correct distance when standing exactly on a track point', () => {
-    const { trackPoints, distToNextTurn } = parseGpx(DIST_FIXTURE)
-    // At segmentIdx=1, position=trackPoints[1], nextPtIdx=2
-    const position = trackPoints[1]
-    const nextPtIdx = 2
-    const total = haversine(position, trackPoints[nextPtIdx]) + distToNextTurn[nextPtIdx]
-    const expected = haversine(trackPoints[1], trackPoints[2]) + haversine(trackPoints[2], trackPoints[3])
-    expect(total).toBeCloseTo(expected, 0)
-  })
-
-  it('gives zero extra distance when next point is the turn', () => {
-    const { trackPoints, distToNextTurn } = parseGpx(DIST_FIXTURE)
-    // At segmentIdx=2, nextPtIdx=3 which is the turn → distToNextTurn[3]=0
-    const position = trackPoints[2]
-    const nextPtIdx = 3
-    const total = haversine(position, trackPoints[nextPtIdx]) + distToNextTurn[nextPtIdx]
-    expect(distToNextTurn[3]).toBe(0)
-    expect(total).toBeCloseTo(haversine(trackPoints[2], trackPoints[3]), 0)
-  })
-})

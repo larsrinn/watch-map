@@ -18,9 +18,9 @@
 - On a multi-hour hike with 1 Hz GPS, that's ~10k+ points. `JSON.stringify` + `localStorage.setItem` on every single fix will cause increasing jank and eventually hit the ~5 MB `localStorage` quota, silently losing data.
 - **Mitigation:** (a) Throttle recording (e.g. every 3s or min-distance filter). (b) Batch `localStorage` writes (e.g. every 30s via a debounced effect). (c) Consider IndexedDB for larger capacity.
 
-### 1d. `distToNextTurn` computed in `gpxParser.ts` but never used
-- `gpxParser.ts:60-68` builds the `distToNextTurn` array and returns it in `ParsedGpx`, but no consumer ever reads it. The navigation distance is computed independently in `mapMatcher.ts`. Dead code.
-- **Mitigation:** Remove `distToNextTurn` from `ParsedGpx` and delete the computation.
+### ~~1d. `distToNextTurn` computed in `gpxParser.ts` but never used~~ ✅ RESOLVED
+- ~~`gpxParser.ts:60-68` builds the `distToNextTurn` array and returns it in `ParsedGpx`, but no consumer ever reads it. The navigation distance is computed independently in `mapMatcher.ts`. Dead code.~~
+- **Fix applied:** Removed `distToNextTurn` from `ParsedGpx` interface, deleted the computation, removed unused `haversine` import, and cleaned up related tests.
 
 ### 1e. Elevation gain has no smoothing — GPS altitude noise inflates the number
 - `TrackStatsScreen.tsx:63-69`: raw GPS altitude deltas are summed. Consumer GPS altitude jitters by 5-20m between fixes, so this will wildly overcount elevation gain.
