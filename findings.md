@@ -67,9 +67,9 @@
 
 ## 4. ROBUSTNESS / EDGE CASES
 
-### 4a. GPX export: no XML escaping
-- `gpxExport.ts:13-14`: `trackName` is interpolated directly into XML. A name containing `<` or `&` produces invalid GPX.
-- **Mitigation:** Escape the string or use a minimal XML builder.
+### ~~4a. GPX export: no XML escaping~~ ✅ RESOLVED
+- ~~`gpxExport.ts:13-14`: `trackName` is interpolated directly into XML. A name containing `<` or `&` produces invalid GPX.~~
+- **Fix applied:** Added `escapeXml` helper in `gpxExport.ts` that escapes `&`, `<`, `>`, `"`, `'`. Tests added in `gpxExport.test.ts`.
 
 ### 4b. GPX parser: no validation
 - `gpxParser.ts:40-42`: `parseFloat(pt.getAttribute('lat')!)` — the `!` asserts non-null, but a malformed file without `lat`/`lon` attributes will produce `NaN` coordinates that silently propagate through the entire system.
@@ -104,7 +104,7 @@
 | **High** | Unbounded `walkedPath` + sync `localStorage` on every fix | App jank/crash on long tracks |
 | **High** | O(n) global search per GPS fix in map matcher | Battery drain, jank on long routes |
 | ~~**High**~~ | ~~`[]` fallback creating new array identity, restarting GPS watcher~~ ✅ | ~~GPS watcher restarts every render when no GPX loaded~~ |
-| **Medium** | No XML escaping in GPX export | Corrupted export files |
+| ~~**Medium**~~ | ~~No XML escaping in GPX export~~ ✅ | ~~Corrupted export files~~ |
 | **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
 | **Medium** | No error boundary | Unrecoverable crash on bad input |

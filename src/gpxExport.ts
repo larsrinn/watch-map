@@ -1,5 +1,9 @@
 import type { RecordedPoint } from './types'
 
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+}
+
 export function exportGpx(points: RecordedPoint[], trackName = 'Recorded Track'): string {
   const firstTime = points[0] ? new Date(points[0].ts).toISOString() : new Date().toISOString()
   const trkpts = points.map(p => {
@@ -9,9 +13,9 @@ export function exportGpx(points: RecordedPoint[], trackName = 'Recorded Track')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="watch-nav">
-  <metadata><name>${trackName}</name><time>${firstTime}</time></metadata>
+  <metadata><name>${escapeXml(trackName)}</name><time>${firstTime}</time></metadata>
   <trk>
-    <name>${trackName}</name>
+    <name>${escapeXml(trackName)}</name>
     <trkseg>
 ${trkpts}
     </trkseg>
