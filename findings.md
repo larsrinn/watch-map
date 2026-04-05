@@ -79,9 +79,9 @@
 - `sw.js`: every fetched tile is cached forever. On a device with limited storage (a watch!), this will eventually fill the cache.
 - **Mitigation:** Add a max-entries eviction policy or a periodic cache cleanup.
 
-### 4d. `usePosition` depends on `trackPoints` array identity for effect re-runs
-- `usePosition.ts:38,61`: `useEffect` depends on `trackPoints`. But `App.tsx:66` creates `gpxData?.trackPoints ?? []` — the fallback `[]` creates a new array on every render, restarting the GPS watcher repeatedly when no GPX is loaded.
-- **Mitigation:** Stabilize the fallback with `useMemo` or a module-level constant: `const EMPTY: [number, number][] = []`.
+### ~~4d. `usePosition` depends on `trackPoints` array identity for effect re-runs~~ ✅ RESOLVED
+- ~~`usePosition.ts:38,61`: `useEffect` depends on `trackPoints`. But `App.tsx:66` creates `gpxData?.trackPoints ?? []` — the fallback `[]` creates a new array on every render, restarting the GPS watcher repeatedly when no GPX is loaded.~~
+- **Fix applied:** Module-level constants `EMPTY_TRACK_POINTS` and `EMPTY_TURNS` in App.tsx; GPS tracking effect in usePosition.ts now uses `[]` deps (watcher starts once on mount, reads matcher via ref).
 
 ---
 
@@ -103,7 +103,7 @@
 |---|---|---|
 | **High** | Unbounded `walkedPath` + sync `localStorage` on every fix | App jank/crash on long tracks |
 | **High** | O(n) global search per GPS fix in map matcher | Battery drain, jank on long routes |
-| **High** | `[]` fallback creating new array identity, restarting GPS watcher | GPS watcher restarts every render when no GPX loaded |
+| ~~**High**~~ | ~~`[]` fallback creating new array identity, restarting GPS watcher~~ ✅ | ~~GPS watcher restarts every render when no GPX loaded~~ |
 | **Medium** | No XML escaping in GPX export | Corrupted export files |
 | **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |

@@ -58,7 +58,7 @@ export function usePosition(
     )
 
     return () => navigator.geolocation.clearWatch(watchId)
-  }, [trackPoints])
+  }, [])
 
   return {
     position: gpsPosition ?? (trackPoints[0] ?? [0, 0]),

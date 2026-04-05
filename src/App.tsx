@@ -17,6 +17,8 @@ const MIN_ZOOM = 10
 const MAX_ZOOM = 17
 const SLEEP_TIMEOUT = 3000
 const SCREEN_COUNT = 4
+const EMPTY_TRACK_POINTS: [number, number][] = []
+const EMPTY_TURNS: ParsedGpx['turns'] = []
 
 // Helpers
 function formatDistance(meters: number): string {
@@ -63,7 +65,9 @@ function App() {
   const [haptic, setHaptic] = useState(false)
 
   // Position (real GPS)
-  const { position, segmentIdx, navigationState, altitude, isActive } = usePosition(gpxData?.trackPoints ?? [], gpxData?.turns ?? [])
+  const trackPoints = gpxData?.trackPoints ?? EMPTY_TRACK_POINTS
+  const turns = gpxData?.turns ?? EMPTY_TURNS
+  const { position, segmentIdx, navigationState, altitude, isActive } = usePosition(trackPoints, turns)
 
   // Refs
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
