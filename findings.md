@@ -2,10 +2,10 @@
 
 ## 1. CORRECTNESS BUGS
 
-### 1a. `haversine` duplicated 3 times with no shared module
-- `gpxParser.ts:14`, `mapMatcher.ts:30`, `TrackStatsScreen.tsx:9`
-- Not just a DRY concern — if one copy is ever fixed/changed, the others silently diverge. This is a latent correctness risk.
-- **Mitigation:** Extract to a shared `geo.ts` utility, import everywhere.
+### ~~1a. `haversine` duplicated 3 times with no shared module~~ ✅ RESOLVED
+- ~~`gpxParser.ts:14`, `mapMatcher.ts:30`, `TrackStatsScreen.tsx:9`~~
+- ~~Not just a DRY concern — if one copy is ever fixed/changed, the others silently diverge. This is a latent correctness risk.~~
+- **Fix applied:** Extracted to shared `src/geo.ts` utility, all consumers (including test files) now import from there. Tests added in `src/geo.test.ts`.
 
 ### 1b. `formatDistance` duplicated with *different logic*
 - `App.tsx:22` uses a 3-tier format (m / 2-decimal km / 1-decimal km) with `toLocaleString`.
@@ -108,6 +108,6 @@
 | **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
 | **Medium** | No error boundary | Unrecoverable crash on bad input |
-| **Low** | Duplicate `haversine`/`formatDistance` | Divergence risk |
+| ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (`haversine` extracted; `formatDistance` still duplicated) | ~~Divergence risk~~ |
 | **Low** | Unsmoothed elevation gain | Inaccurate stats |
 | **Low** | Unbounded SW tile cache | Storage exhaustion over time |

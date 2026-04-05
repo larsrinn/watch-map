@@ -1,19 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { createMapMatcher } from './mapMatcher'
 import type { TurnInstruction } from './gpxParser'
+import { haversine } from './geo'
 
 // Helper: build a straight north-going route with n points, 0.001° lat apart (~111m/step)
 function straightRoute(n: number): [number, number][] {
   return Array.from({ length: n }, (_, i) => [50 + i * 0.001, 8.0] as [number, number])
-}
-
-function haversine(a: [number, number], b: [number, number]): number {
-  const R = 6371000
-  const r = Math.PI / 180
-  const dLat = (b[0] - a[0]) * r
-  const dLon = (b[1] - a[1]) * r
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s))
 }
 
 // 5-point route with a turn at idx 3
