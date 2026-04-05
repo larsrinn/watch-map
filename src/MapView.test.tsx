@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createElement, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
-import { TileLayer } from './MapView'
+import { TileLayer, MapView } from './MapView'
 
 function render(element: React.ReactElement) {
   const container = document.createElement('div')
@@ -98,5 +98,88 @@ describe('TileLayer', () => {
     act(() => { root.render(createElement(TileLayer, { zoom: 2, center })) })
 
     expect(c.innerHTML).toBe(htmlBefore)
+  })
+})
+
+const baseMapViewProps = {
+  zoom: 15,
+  currentPosition: [48.1, 11.5] as [number, number],
+  followMode: true,
+  offsetX: 0,
+  offsetY: 0,
+  trackPoints: [[48.1, 11.5], [48.101, 11.501], [48.102, 11.502]] as [number, number][],
+  recordedPath: [
+    { lat: 48.1, lon: 11.5, alt: 500, time: Date.now() },
+    { lat: 48.101, lon: 11.501, alt: 501, time: Date.now() },
+  ],
+  sleeping: false,
+  onSleepClick: () => {},
+  currentTime: new Date(),
+  navInstruction: null,
+  showTrackDots: false,
+  showTurnDots: false,
+  turns: [],
+}
+
+describe('MapView track memoization', () => {
+  it('uses g transform for track rendering instead of baking center into each point', () => {
+    const { container } = render(createElement(MapView, baseMapViewProps))
+    const trackSvg = container.querySelector('.track-svg')
+    const gElements = trackSvg?.querySelectorAll('g[transform]')
+    expect(gElements?.length).toBeGreaterThan(0)
+  })
+
+  it('track path d attribute stays the same when only position changes', () => {
+    const props = { ...baseMapViewProps }
+    const { container, root } = render(createElement(MapView, props))
+
+    const getPathD = () => container.querySelector('.track-svg path')?.getAttribute('d')
+    const pathBefore = getPathD()
+    expect(pathBefore).toBeTruthy()
+
+    // Change position (which changes center) but keep same trackPoints reference
+    act(() => {
+      root.render(createElement(MapView, {
+        ...props,
+        currentPosition: [48.105, 11.505] as [number, number],
+      }))
+    })
+
+    const pathAfter = getPathD()
+    // Path d should be identical — only the g transform changes
+    expect(pathAfter).toBe(pathBefore)
+  })
+
+  it('track path d attribute changes when zoom changes', () => {
+    const props = { ...baseMapViewProps }
+    const { container, root } = render(createElement(MapView, props))
+
+    const getPathD = () => container.querySelector('.track-svg path')?.getAttribute('d')
+    const pathBefore = getPathD()
+
+    act(() => {
+      root.render(createElement(MapView, { ...props, zoom: 16 }))
+    })
+
+    const pathAfter = getPathD()
+    expect(pathAfter).not.toBe(pathBefore)
+  })
+
+  it('g transform updates when position changes', () => {
+    const props = { ...baseMapViewProps }
+    const { container, root } = render(createElement(MapView, props))
+
+    const getTransform = () => container.querySelector('.track-svg g')?.getAttribute('transform')
+    const transformBefore = getTransform()
+
+    act(() => {
+      root.render(createElement(MapView, {
+        ...props,
+        currentPosition: [48.105, 11.505] as [number, number],
+      }))
+    })
+
+    const transformAfter = getTransform()
+    expect(transformAfter).not.toBe(transformBefore)
   })
 })

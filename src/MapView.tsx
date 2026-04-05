@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, memo, type ReactElement } from 'react'
+import { useState, useRef, useCallback, useMemo, memo, type ReactElement } from 'react'
 import type { RecordedPoint } from './types'
 import type { TurnInstruction } from './gpxParser'
 import { LruCache } from './LruCache'
@@ -145,53 +145,60 @@ export function MapView({
 }: MapViewProps) {
   const center = getCenter(currentPosition, zoom, followMode, offsetX, offsetY)
 
-  const renderTrack = useCallback(() => {
-    const trackPts = trackPoints.map(([lat, lon]) => {
-      const p = latLonPx(lat, lon, zoom)
-      return { x: p.x - center.x + HALF, y: p.y - center.y + HALF }
-    })
-    const trackD = trackPts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
+  // Memoize world-pixel projections — only recompute when zoom or data changes, not on every position update
+  const trackPathD = useMemo(() => {
+    const pts = trackPoints.map(([lat, lon]) => latLonPx(lat, lon, zoom))
+    return pts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
+  }, [zoom, trackPoints])
 
-    const walked = recordedPath.map(({ lat, lon }) => {
-      const p = latLonPx(lat, lon, zoom)
-      return { x: p.x - center.x + HALF, y: p.y - center.y + HALF }
-    })
-    const walkedD = walked.length > 1
-      ? walked.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
+  const walkedPathD = useMemo(() => {
+    const pts = recordedPath.map(({ lat, lon }) => latLonPx(lat, lon, zoom))
+    return pts.length > 1
+      ? pts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
       : ''
+  }, [zoom, recordedPath])
+
+  const trackPtsWorld = useMemo(() =>
+    trackPoints.map(([lat, lon]) => latLonPx(lat, lon, zoom)),
+    [zoom, trackPoints]
+  )
+
+  const renderTrack = useCallback(() => {
+    const tx = HALF - center.x
+    const ty = HALF - center.y
 
     return (
-      <>
-        <path d={trackD} fill="none" stroke="#3498db" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-        <path d={trackD} fill="none" stroke="#5dade2" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
-        {walkedD && (
+      <g transform={`translate(${tx},${ty})`}>
+        <path d={trackPathD} fill="none" stroke="#3498db" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
+        <path d={trackPathD} fill="none" stroke="#5dade2" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+        {walkedPathD && (
           <>
-            <path d={walkedD} fill="none" stroke="#e74c3c" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
-            <path d={walkedD} fill="none" stroke="#f39c12" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+            <path d={walkedPathD} fill="none" stroke="#e74c3c" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+            <path d={walkedPathD} fill="none" stroke="#f39c12" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
           </>
         )}
-        {showTrackDots && trackPts.map((p, i) => (
+        {showTrackDots && trackPtsWorld.map((p, i) => (
           <circle key={i} cx={p.x} cy={p.y} r="2" fill="#3498db" opacity="0.7" />
         ))}
         {showTurnDots && turns.map((t) => {
-          const tp = trackPts[t.idx]
+          const tp = trackPtsWorld[t.idx]
           if (!tp) return null
           return <circle key={t.idx} cx={tp.x} cy={tp.y} r="3.5" fill="#f1c40f" stroke="#fff" strokeWidth="1" opacity="0.9" />
         })}
-      </>
+      </g>
     )
-  }, [center, zoom, trackPoints, recordedPath, showTrackDots, showTurnDots, turns])
+  }, [center, trackPathD, walkedPathD, trackPtsWorld, showTrackDots, showTurnDots, turns])
 
   const renderPosition = useCallback(() => {
     const p = latLonPx(currentPosition[0], currentPosition[1], zoom)
-    const x = p.x - center.x + HALF
-    const y = p.y - center.y + HALF
+    const tx = HALF - center.x
+    const ty = HALF - center.y
 
     return (
-      <>
-        <circle cx={x} cy={y} r="10" fill="rgba(0,120,255,0.2)" />
-        <circle cx={x} cy={y} r="5" fill="#007AFF" stroke="#fff" strokeWidth="2" />
-      </>
+      <g transform={`translate(${tx},${ty})`}>
+        <circle cx={p.x} cy={p.y} r="10" fill="rgba(0,120,255,0.2)" />
+        <circle cx={p.x} cy={p.y} r="5" fill="#007AFF" stroke="#fff" strokeWidth="2" />
+      </g>
     )
   }, [center, currentPosition, zoom])
 

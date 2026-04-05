@@ -35,9 +35,9 @@
 - Every state change (e.g. the 1-second clock tick at line 244) causes the full component tree's dependency closures to be re-evaluated.
 - **Mitigation:** Extract concerns into custom hooks: `useMapInteraction` (zoom, pan, follow), `useSleepWake`, `useTrackRecording`, `useNavigation`. The `App` becomes a thin shell wiring them together.
 
-### 2b. `MapView` re-renders on every position update, re-projects every track point
-- `renderTrack` (line 145) maps *all* `trackPoints` and *all* `walkedPath` points through `latLonPx` on every render. For a 5,000-point GPX plus a growing walked path, this is O(n) on every GPS fix.
-- **Mitigation:** Memoize projected track points separately (keyed on `zoom` + `trackPoints` identity). Only reproject `walkedPath` incrementally or on zoom change.
+### ~~2b. `MapView` re-renders on every position update, re-projects every track point~~ ✅ RESOLVED
+- ~~`renderTrack` (line 145) maps *all* `trackPoints` and *all* `walkedPath` points through `latLonPx` on every render. For a 5,000-point GPX plus a growing walked path, this is O(n) on every GPS fix.~~
+- **Fix applied:** Memoized world-pixel projections via `useMemo` (keyed on `zoom` + data identity). Center offset is now applied via SVG `<g transform="translate(...)">` instead of baking into each point — position changes only update the transform (O(1)), not re-project all points. Tests added in `MapView.test.tsx`.
 
 ### ~~2c. Tile cache eviction runs on every cache miss~~ ✅ RESOLVED
 - ~~`MapView.tsx:91-93`: sorts all 150+ entries on every new tile load to evict 30%. Sorting is O(n log n) per tile miss.~~
