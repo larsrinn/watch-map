@@ -1,6 +1,6 @@
 import './TrackStatsScreen.css'
 import type { RecordedPoint } from '../types'
-import { haversine } from '../geo'
+import { haversine, formatDistance } from '../geo'
 
 interface TrackStatsScreenProps {
   walkedPath: RecordedPoint[]
@@ -14,11 +14,6 @@ function formatDuration(ms: number): string {
   const s = totalSec % 60
   if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   return `${m}:${s.toString().padStart(2, '0')}`
-}
-
-function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)} m`
-  return `${(meters / 1000).toFixed(2)} km`
 }
 
 function formatTime(ts: number): string {

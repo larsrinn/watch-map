@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { haversine } from './geo'
+import { haversine, formatDistance } from './geo'
 
 describe('haversine', () => {
   it('returns 0 for identical points', () => {
@@ -36,5 +36,31 @@ describe('haversine', () => {
     const dist = haversine([0, 0], [0, 180])
     expect(dist).toBeGreaterThan(20_000_000)
     expect(dist).toBeLessThan(20_040_000)
+  })
+})
+
+describe('formatDistance', () => {
+  it('formats small distances in meters', () => {
+    expect(formatDistance(42)).toMatch(/42\s*m/)
+    expect(formatDistance(0)).toMatch(/0\s*m/)
+    expect(formatDistance(99)).toMatch(/99\s*m/)
+  })
+
+  it('formats distances between 100-300m with 2 decimal km', () => {
+    const result = formatDistance(150)
+    expect(result).toContain('km')
+    // 0.15 km — should have 2 decimal places
+    expect(result).toMatch(/0[.,]15/)
+  })
+
+  it('formats distances >= 300m with 1 decimal km', () => {
+    const result = formatDistance(1500)
+    expect(result).toContain('km')
+    // 1.5 km — should have 1 decimal place
+    expect(result).toMatch(/1[.,]5/)
+  })
+
+  it('rounds meters to whole numbers', () => {
+    expect(formatDistance(42.7)).toMatch(/43\s*m/)
   })
 })

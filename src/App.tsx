@@ -11,6 +11,7 @@ import type { RecordedPoint } from './types'
 import { preloadTiles } from './tilePreloader'
 import type { PreloadStatus } from './tilePreloader'
 import { exportGpx } from './gpxExport'
+import { formatDistance } from './geo'
 
 // Constants
 const MIN_ZOOM = 10
@@ -19,17 +20,6 @@ const SLEEP_TIMEOUT = 3000
 const SCREEN_COUNT = 4
 const EMPTY_TRACK_POINTS: [number, number][] = []
 const EMPTY_TURNS: ParsedGpx['turns'] = []
-
-// Helpers
-function formatDistance(meters: number): string {
-  if (meters < 100) {
-    return `${Math.round(meters).toLocaleString()} m`
-  } else if (meters < 300) {
-    return `${(meters / 1000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`
-  } else {
-    return `${(meters / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`
-  }
-}
 
 
 function App() {

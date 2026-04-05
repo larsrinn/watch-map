@@ -7,11 +7,11 @@
 - ~~Not just a DRY concern — if one copy is ever fixed/changed, the others silently diverge. This is a latent correctness risk.~~
 - **Fix applied:** Extracted to shared `src/geo.ts` utility, all consumers (including test files) now import from there. Tests added in `src/geo.test.ts`.
 
-### 1b. `formatDistance` duplicated with *different logic*
-- `App.tsx:22` uses a 3-tier format (m / 2-decimal km / 1-decimal km) with `toLocaleString`.
-- `TrackStatsScreen.tsx:27` uses a 2-tier format (m / 2-decimal km) with `toFixed`.
-- These will produce inconsistent display for the same distance.
-- **Mitigation:** Single shared `formatDistance`.
+### ~~1b. `formatDistance` duplicated with *different logic*~~ ✅ RESOLVED
+- ~~`App.tsx:22` uses a 3-tier format (m / 2-decimal km / 1-decimal km) with `toLocaleString`.~~
+- ~~`TrackStatsScreen.tsx:27` uses a 2-tier format (m / 2-decimal km) with `toFixed`.~~
+- ~~These will produce inconsistent display for the same distance.~~
+- **Fix applied:** Extracted to shared `src/geo.ts` (3-tier format with `toLocaleString`). Both `App.tsx` and `TrackStatsScreen.tsx` now import from there. Tests added in `src/geo.test.ts`.
 
 ### 1c. Walked path records every GPS fix — unbounded array growth
 - `App.tsx:251`: every `watchPosition` callback appends to `walkedPath`, then the entire array is serialized to `localStorage` (`App.tsx:258`).
@@ -108,6 +108,6 @@
 | **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
 | **Medium** | No error boundary | Unrecoverable crash on bad input |
-| ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (`haversine` extracted; `formatDistance` still duplicated) | ~~Divergence risk~~ |
+| ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (both extracted to `geo.ts`) | ~~Divergence risk~~ |
 | **Low** | Unsmoothed elevation gain | Inaccurate stats |
 | **Low** | Unbounded SW tile cache | Storage exhaustion over time |
