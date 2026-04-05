@@ -55,9 +55,9 @@
 - ~~As noted above, `JSON.stringify` of a growing array on every position update is expensive and synchronous — it blocks the main thread.~~
 - **Fix applied:** Debounced to every 30 seconds via `setInterval` + ref, with flush on `beforeunload` and effect cleanup (see 1c fix).
 
-### 3b. Global search in `mapMatcher.updatePosition`
-- `mapMatcher.ts:108-116`: iterates *all* track points to find the global best on every fix. For a 10,000-point track, that's 10k haversine calls per second.
-- **Mitigation:** Build a spatial index (grid-based bucket lookup) or only run the global search every N fixes, not on every single update.
+### ~~3b. Global search in `mapMatcher.updatePosition`~~ ✅ RESOLVED
+- ~~`mapMatcher.ts:108-116`: iterates *all* track points to find the global best on every fix. For a 10,000-point track, that's 10k haversine calls per second.~~
+- **Fix applied:** Built a grid-based spatial index at construction time (0.01° cells ≈ ~1km). Global nearest-point search now only checks the 9 neighboring grid cells instead of all N track points. Tests added in `mapMatcher.test.ts`.
 
 ### 3c. `renderKey` hack forces full MapView re-render
 - `MapView.tsx:86`: `setRenderKey(k => k + 1)` on every tile load triggers a state change, which re-renders the entire MapView including all SVG path projections. This means loading 50 tiles = 50 complete re-renders.
@@ -102,7 +102,7 @@
 | Priority | Issue | Impact |
 |---|---|---|
 | ~~**High**~~ | ~~Unbounded `walkedPath` + sync `localStorage` on every fix~~ ✅ | ~~App jank/crash on long tracks~~ |
-| **High** | O(n) global search per GPS fix in map matcher | Battery drain, jank on long routes |
+| ~~**High**~~ | ~~O(n) global search per GPS fix in map matcher~~ ✅ | ~~Battery drain, jank on long routes~~ |
 | ~~**High**~~ | ~~`[]` fallback creating new array identity, restarting GPS watcher~~ ✅ | ~~GPS watcher restarts every render when no GPX loaded~~ |
 | ~~**Medium**~~ | ~~No XML escaping in GPX export~~ ✅ | ~~Corrupted export files~~ |
 | **Medium** | Tile `renderKey` re-renders entire MapView per tile load | Sluggish map during tile loading |

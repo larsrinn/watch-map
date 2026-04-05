@@ -28,6 +28,46 @@ export interface MapMatcher {
   reset(): void
 }
 
+// Grid cell size in degrees (~1km at mid-latitudes)
+const GRID_CELL_SIZE = 0.01
+
+function cellKey(lat: number, lon: number): string {
+  const r = Math.floor(lat / GRID_CELL_SIZE)
+  const c = Math.floor(lon / GRID_CELL_SIZE)
+  return `${r},${c}`
+}
+
+function buildSpatialIndex(trackPoints: [number, number][]): Map<string, number[]> {
+  const grid = new Map<string, number[]>()
+  for (let i = 0; i < trackPoints.length; i++) {
+    const key = cellKey(trackPoints[i][0], trackPoints[i][1])
+    let bucket = grid.get(key)
+    if (!bucket) {
+      bucket = []
+      grid.set(key, bucket)
+    }
+    bucket.push(i)
+  }
+  return grid
+}
+
+function getNearbyIndices(grid: Map<string, number[]>, lat: number, lon: number): number[] {
+  const r = Math.floor(lat / GRID_CELL_SIZE)
+  const c = Math.floor(lon / GRID_CELL_SIZE)
+  const result: number[] = []
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const bucket = grid.get(`${r + dr},${c + dc}`)
+      if (bucket) {
+        for (let i = 0; i < bucket.length; i++) {
+          result.push(bucket[i])
+        }
+      }
+    }
+  }
+  return result
+}
+
 export function createMapMatcher(
   trackPoints: [number, number][],
   turns: TurnInstruction[],
@@ -57,6 +97,9 @@ export function createMapMatcher(
     cumulativeDist[i + 1] = cumulativeDist[i] + segmentLength[i]
   }
   const totalRouteLength = cumulativeDist[n - 1]
+
+  // Spatial index for fast global nearest-point lookup
+  const spatialGrid = buildSpatialIndex(trackPoints)
 
   let currentIndex = 0
   let jumpCandidateIndex: number | null = null
@@ -96,15 +139,21 @@ export function createMapMatcher(
       }
     }
 
-    // Find globally nearest point
-    let globalBestIdx = 0
-    let globalBestDist = distToPoint(lat, lon, 0)
-    for (let i = 1; i < n; i++) {
-      const d = distToPoint(lat, lon, i)
+    // Find globally nearest point using spatial index (checks nearby grid cells only)
+    const nearby = getNearbyIndices(spatialGrid, lat, lon)
+    let globalBestIdx = nearby.length > 0 ? nearby[0] : localBestIdx
+    let globalBestDist = nearby.length > 0 ? distToPoint(lat, lon, nearby[0]) : localBestDist
+    for (let k = 1; k < nearby.length; k++) {
+      const d = distToPoint(lat, lon, nearby[k])
       if (d < globalBestDist) {
         globalBestDist = d
-        globalBestIdx = i
+        globalBestIdx = nearby[k]
       }
+    }
+    // If no nearby candidates found, fall back to local best (no jump possible)
+    if (nearby.length === 0) {
+      globalBestDist = localBestDist
+      globalBestIdx = localBestIdx
     }
 
     // Check if global jump is warranted (global candidate is significantly closer and outside window)

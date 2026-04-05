@@ -263,6 +263,63 @@ describe('no turns (distance-only mode)', () => {
   })
 })
 
+describe('spatial index — global search performance', () => {
+  it('finds global best on a large route without scanning all points', () => {
+    // 1000-point route — old code would do 1000 haversine calls per fix,
+    // spatial index checks only nearby grid cells
+    const route = straightRoute(1000)
+    const m = createMapMatcher(route, [], {
+      forwardWindowDistance: 500,
+      jumpConfirmFixes: 3,
+      jumpThresholdRatio: 0.3,
+    })
+
+    // Start at beginning
+    m.updatePosition(route[0][0], route[0][1])
+
+    // Teleport to idx 900 — spatial index must still find it
+    const far = route[900]
+    m.updatePosition(far[0], far[1])
+    m.updatePosition(far[0], far[1])
+    const s = m.updatePosition(far[0], far[1]) // 3rd fix → jump
+    expect(s.currentIndex).toBe(900)
+  })
+
+  it('works when GPS position is far from any track point', () => {
+    const route = straightRoute(10)
+    const m = createMapMatcher(route, [])
+
+    // Position very far from any point on the route (different grid cell, no nearby hits)
+    const s = m.updatePosition(60.0, 20.0)
+    // Should still return a valid state (falls back to local best)
+    expect(s.currentIndex).toBeGreaterThanOrEqual(0)
+    expect(s.currentIndex).toBeLessThan(10)
+  })
+
+  it('jumps correctly on a route that crosses grid cell boundaries', () => {
+    // Route spanning multiple grid cells (each cell is 0.01°)
+    const route: [number, number][] = Array.from({ length: 50 }, (_, i) => [
+      50 + i * 0.005, // 0.005° steps → crosses cell boundary every 2 points
+      8 + i * 0.005,
+    ])
+    const m = createMapMatcher(route, [], {
+      forwardWindowDistance: 500,
+      jumpConfirmFixes: 3,
+      jumpThresholdRatio: 0.3,
+    })
+
+    // Start at beginning
+    m.updatePosition(route[0][0], route[0][1])
+
+    // Teleport to idx 25 (well beyond forward window)
+    const target = route[25]
+    m.updatePosition(target[0], target[1])
+    m.updatePosition(target[0], target[1])
+    const s = m.updatePosition(target[0], target[1]) // 3rd fix → jump
+    expect(s.currentIndex).toBe(25)
+  })
+})
+
 describe('edge cases', () => {
   it('handles start of route correctly', () => {
     const route = straightRoute(5)
