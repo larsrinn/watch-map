@@ -30,10 +30,10 @@
 
 ## 2. ARCHITECTURE ISSUES
 
-### 2a. God component — `App.tsx` holds all state and logic
-- ~420 lines. Map state, tracking state, settings, sleep/wake, GPX loading, export, preloading, keyboard/touch/pointer handlers, timers — all in one component.
-- Every state change (e.g. the 1-second clock tick at line 244) causes the full component tree's dependency closures to be re-evaluated.
-- **Mitigation:** Extract concerns into custom hooks: `useMapInteraction` (zoom, pan, follow), `useSleepWake`, `useTrackRecording`, `useNavigation`. The `App` becomes a thin shell wiring them together.
+### ~~2a. God component — `App.tsx` holds all state and logic~~ ✅ RESOLVED
+- ~~~420 lines. Map state, tracking state, settings, sleep/wake, GPX loading, export, preloading, keyboard/touch/pointer handlers, timers — all in one component.~~
+- ~~Every state change (e.g. the 1-second clock tick at line 244) causes the full component tree's dependency closures to be re-evaluated.~~
+- **Fix applied:** Extracted five custom hooks: `useSleepWake` (sleep/wake state, timer, haptic), `useMapInteraction` (zoom, pan, follow mode, pointer/wheel handlers), `useTrackRecording` (recording state, min-distance filter, localStorage persistence, export), `useScreenNavigation` (screen index, keyboard/swipe navigation), `useNavigation` (GPX loading, preloading, position/navigation state). App.tsx is now a thin shell (~170 lines) wiring hooks together. Tests added for all five hooks.
 
 ### ~~2b. `MapView` re-renders on every position update, re-projects every track point~~ ✅ RESOLVED
 - ~~`renderTrack` (line 145) maps *all* `trackPoints` and *all* `walkedPath` points through `latLonPx` on every render. For a 5,000-point GPX plus a growing walked path, this is O(n) on every GPS fix.~~
@@ -106,7 +106,7 @@
 | ~~**High**~~ | ~~`[]` fallback creating new array identity, restarting GPS watcher~~ ✅ | ~~GPS watcher restarts every render when no GPX loaded~~ |
 | ~~**Medium**~~ | ~~No XML escaping in GPX export~~ ✅ | ~~Corrupted export files~~ |
 | ~~**Medium**~~ | ~~Tile `renderKey` re-renders entire MapView per tile load~~ ✅ | ~~Sluggish map during tile loading~~ |
-| **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
+| ~~**Medium**~~ | ~~God component in `App.tsx`~~ ✅ | ~~Maintenance burden, unnecessary re-renders~~ |
 | ~~**Medium**~~ | ~~No error boundary~~ ✅ | ~~Unrecoverable crash on bad input~~ |
 | ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (both extracted to `geo.ts`) | ~~Divergence risk~~ |
 | ~~**Low**~~ | ~~Unsmoothed elevation gain~~ ✅ | ~~Inaccurate stats~~ |
