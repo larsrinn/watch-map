@@ -272,35 +272,3 @@
   height: 3px;
   border-radius: 2px;
 }
-
-.dev-panel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid #444;
-  border-radius: 8px;
-  font-family: monospace;
-  font-size: 12px;
-  color: #aaa;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.dev-label {
-  color: #f39c12;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.dev-input {
-  width: 56px;
-  margin-left: 6px;
-  background: #222;
-  border: 1px solid #555;
-  border-radius: 4px;
-  color: #fff;
-  padding: 2px 4px;
-  font-size: 12px;
-  font-family: monospace;
-}

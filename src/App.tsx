@@ -5,7 +5,6 @@ import { parseGpx } from './gpxParser'
 import type { ParsedGpx } from './gpxParser'
 import { MapView } from './MapView'
 import { usePosition } from './hooks/usePosition'
-import { DevPanel } from './components/DevPanel'
 import { ControlScreen } from './components/ControlScreen'
 import { TrackStatsScreen } from './components/TrackStatsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
@@ -64,9 +63,8 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [haptic, setHaptic] = useState(false)
 
-  // Position (real GPS or simulation)
-  const { position, segmentIdx, navigationState, altitude, isActive, isSimulating, isSimPaused,
-          startSimulation, pauseSimulation, resumeSimulation, stopSimulation } = usePosition(gpxData.trackPoints, gpxData.turns)
+  // Position (real GPS)
+  const { position, segmentIdx, navigationState, altitude, isActive } = usePosition(gpxData.trackPoints, gpxData.turns)
 
   // Refs
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
@@ -133,13 +131,18 @@ function App() {
   const handleStartTrack = useCallback(() => {
     setIsTracking(true)
     setWalkedPath([])
+    localStorage.removeItem('watch-nav-track')
+    setCurrentScreen(1)
+  }, [])
+
+  const handleContinueTrack = useCallback(() => {
+    setIsTracking(true)
     setCurrentScreen(1)
   }, [])
 
   const handleStop = useCallback(() => {
     setIsTracking(false)
-    stopSimulation()
-  }, [stopSimulation])
+  }, [])
 
   const handleClear = useCallback(() => {
     setWalkedPath([])
@@ -158,12 +161,6 @@ function App() {
     a.click()
     URL.revokeObjectURL(url)
   }, [walkedPath])
-
-  const handleStartSimulation = useCallback((duration: number) => {
-    setIsTracking(true)
-    setWalkedPath([])
-    startSimulation(duration)
-  }, [startSimulation])
 
   // Event handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -335,6 +332,7 @@ function App() {
                 hasTrack={walkedPath.length > 0}
                 onGpxLoad={handleGpxLoad}
                 onStartTrack={handleStartTrack}
+                onContinueTrack={handleContinueTrack}
                 onStop={handleStop}
                 onClear={handleClear}
                 onExportGpx={handleExportGpx}
@@ -414,17 +412,6 @@ function App() {
           −
         </button>
       </div>
-
-      {import.meta.env.DEV && (
-        <DevPanel
-          isSimulating={isSimulating}
-          isPaused={isSimPaused}
-          onStart={handleStartSimulation}
-          onPause={pauseSimulation}
-          onResume={resumeSimulation}
-          onStop={stopSimulation}
-        />
-      )}
 
       <div className="hint">
         Display schläft nach 3s ein · Antippen weckt auf · Bei Abbiegehinweis wacht es automatisch auf<br />

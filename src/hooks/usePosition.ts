@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { useSimulation } from './useSimulation'
 import { createMapMatcher, DEFAULT_CONFIG } from '../mapMatcher'
 import type { MapMatcher, NavigationState } from '../mapMatcher'
 import type { TurnInstruction } from '../gpxParser'
@@ -19,12 +18,6 @@ export function usePosition(
   navigationState: NavigationState
   altitude: number | null
   isActive: boolean
-  isSimulating: boolean
-  isSimPaused: boolean
-  startSimulation: (durationSeconds: number) => void
-  pauseSimulation: () => void
-  resumeSimulation: () => void
-  stopSimulation: () => void
 } {
   const [gpsPosition, setGpsPosition] = useState<[number, number] | null>(null)
   const [gpsAltitude, setGpsAltitude] = useState<number | null>(null)
@@ -34,9 +27,6 @@ export function usePosition(
   )
 
   const matcherRef = useRef<MapMatcher | null>(null)
-
-  const sim = useSimulation(trackPoints)
-  const simActive = import.meta.env.DEV && (sim.isRunning || sim.isPaused)
 
   // Recreate map matcher when track changes
   useEffect(() => {
@@ -50,7 +40,6 @@ export function usePosition(
   // GPS tracking
   useEffect(() => {
     if (!navigator.geolocation) return
-    if (simActive) return
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -69,31 +58,7 @@ export function usePosition(
     )
 
     return () => navigator.geolocation.clearWatch(watchId)
-  }, [trackPoints, simActive])
-
-  // Feed simulation positions through the map matcher
-  useEffect(() => {
-    if (!simActive) return
-    if (matcherRef.current) {
-      setNavigationState(matcherRef.current.updatePosition(sim.position[0], sim.position[1]))
-    }
-  }, [simActive, sim.position])
-
-  if (simActive) {
-    return {
-      position: sim.position,
-      segmentIdx: navigationState.currentIndex,
-      navigationState,
-      altitude: null,
-      isActive: true,
-      isSimulating: sim.isRunning,
-      isSimPaused: sim.isPaused,
-      startSimulation: sim.start,
-      pauseSimulation: sim.pause,
-      resumeSimulation: sim.resume,
-      stopSimulation: sim.stop,
-    }
-  }
+  }, [trackPoints])
 
   return {
     position: gpsPosition ?? (trackPoints[0] ?? [0, 0]),
@@ -101,11 +66,5 @@ export function usePosition(
     navigationState,
     altitude: gpsAltitude,
     isActive: hasGpsFix,
-    isSimulating: false,
-    isSimPaused: false,
-    startSimulation: import.meta.env.DEV ? sim.start : () => {},
-    pauseSimulation: import.meta.env.DEV ? sim.pause : () => {},
-    resumeSimulation: import.meta.env.DEV ? sim.resume : () => {},
-    stopSimulation: import.meta.env.DEV ? sim.stop : () => {},
   }
 }

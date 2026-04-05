@@ -8,13 +8,14 @@ interface ControlScreenProps {
   hasTrack: boolean
   onGpxLoad: (content: string, fileName: string) => void
   onStartTrack: () => void
+  onContinueTrack: () => void
   onStop: () => void
   onClear: () => void
   onExportGpx: () => void
   preloadStatus: PreloadStatus
 }
 
-export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, onStartTrack, onStop, onClear, onExportGpx, preloadStatus }: ControlScreenProps) {
+export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, onStartTrack, onContinueTrack, onStop, onClear, onExportGpx, preloadStatus }: ControlScreenProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,20 +65,23 @@ export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, on
       <button className="btn control-btn" style={{ background: '#2980b9' }} onClick={() => fileInputRef.current?.click()}>
         Pick GPX
       </button>
-      <button
-        className="btn control-btn"
-        style={{ background: isTracking ? '#555' : '#27ae60' }}
-        disabled={isTracking}
-        onClick={onStartTrack}
-      >
-        {isTracking ? 'Tracking...' : hasTrack ? 'New Track' : 'Start Track'}
-      </button>
       {isTracking ? (
-        <button className="btn control-btn" style={{ background: '#c0392b' }} onClick={onStop}>
-          Stop
-        </button>
+        <>
+          <button className="btn control-btn" style={{ background: '#555' }} disabled>
+            Tracking...
+          </button>
+          <button className="btn control-btn" style={{ background: '#c0392b' }} onClick={onStop}>
+            Stop
+          </button>
+        </>
       ) : hasTrack ? (
         <>
+          <button className="btn control-btn" style={{ background: '#27ae60' }} onClick={onContinueTrack}>
+            Continue
+          </button>
+          <button className="btn control-btn" style={{ background: '#555' }} onClick={onStartTrack}>
+            New Track
+          </button>
           <button className="btn control-btn" style={{ background: '#555' }} onClick={onClear}>
             Clear
           </button>
@@ -86,9 +90,14 @@ export function ControlScreen({ gpxFileName, isTracking, hasTrack, onGpxLoad, on
           </button>
         </>
       ) : (
-        <button className="btn control-btn" style={{ background: '#555' }} disabled>
-          Stop
-        </button>
+        <>
+          <button className="btn control-btn" style={{ background: '#27ae60' }} onClick={onStartTrack}>
+            Start Track
+          </button>
+          <button className="btn control-btn" style={{ background: '#555' }} disabled>
+            Stop
+          </button>
+        </>
       )}
     </div>
   )
