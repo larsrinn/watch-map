@@ -39,9 +39,9 @@
 - `renderTrack` (line 145) maps *all* `trackPoints` and *all* `walkedPath` points through `latLonPx` on every render. For a 5,000-point GPX plus a growing walked path, this is O(n) on every GPS fix.
 - **Mitigation:** Memoize projected track points separately (keyed on `zoom` + `trackPoints` identity). Only reproject `walkedPath` incrementally or on zoom change.
 
-### 2c. Tile cache eviction runs on every cache miss
-- `MapView.tsx:91-93`: sorts all 150+ entries on every new tile load to evict 30%. Sorting is O(n log n) per tile miss.
-- **Mitigation:** Use a proper LRU (doubly-linked list + Map) or simply evict the single oldest entry when at capacity.
+### ~~2c. Tile cache eviction runs on every cache miss~~ ✅ RESOLVED
+- ~~`MapView.tsx:91-93`: sorts all 150+ entries on every new tile load to evict 30%. Sorting is O(n log n) per tile miss.~~
+- **Fix applied:** Extracted a generic `LruCache` class (`src/LruCache.ts`) backed by Map insertion order. On access, entries are moved to the end; eviction removes from the front in O(1). MapView's tile cache now uses `LruCache` instead of manual sort-and-slice. Tests added in `LruCache.test.ts`.
 
 ### 2d. No error boundary
 - A parsing error in a malformed GPX, or a runtime error in map rendering, will crash the entire app with no recovery.

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, type ReactElement } from 'react'
 import type { RecordedPoint } from './types'
 import type { TurnInstruction } from './gpxParser'
+import { LruCache } from './LruCache'
 
 // Constants
 const TILE_SIZE = 256
@@ -21,9 +22,10 @@ function latLonPx(lat: number, lon: number, z: number): { x: number; y: number }
   return { x: lon2tile(lon, z) * TILE_SIZE, y: lat2tile(lat, z) * TILE_SIZE }
 }
 
+const MAX_TILE_CACHE = 150
+
 interface TileEntry {
   img: HTMLImageElement
-  lastUsed: number
 }
 
 export interface NavInstruction {
@@ -67,18 +69,14 @@ export function MapView({
   turns,
 }: MapViewProps) {
   const [renderKey, setRenderKey] = useState(0)
-  const [cacheSize, setCacheSize] = useState(0)
-  const tileCacheRef = useRef<Map<string, TileEntry>>(new Map())
+  const tileCacheRef = useRef(new LruCache<string, TileEntry>(MAX_TILE_CACHE))
 
   const loadTile = useCallback((z: number, x: number, y: number): HTMLImageElement => {
     const key = `${z}/${x}/${y}`
     const cache = tileCacheRef.current
 
-    if (cache.has(key)) {
-      const entry = cache.get(key)!
-      entry.lastUsed = Date.now()
-      return entry.img
-    }
+    const cached = cache.get(key)
+    if (cached) return cached.img
 
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -86,14 +84,7 @@ export function MapView({
     img.onload = () => setRenderKey(k => k + 1)
     img.onerror = () => { (img as HTMLImageElement & { _failed: boolean })._failed = true }
 
-    cache.set(key, { img, lastUsed: Date.now() })
-
-    if (cache.size > 150) {
-      const entries = [...cache.entries()].sort((a, b) => a[1].lastUsed - b[1].lastUsed)
-      entries.slice(0, Math.floor(150 * 0.3)).forEach(([k]) => cache.delete(k))
-    }
-
-    setCacheSize(cache.size)
+    cache.set(key, { img })
     return img
   }, [])
 
@@ -215,7 +206,7 @@ export function MapView({
         </div>
       )}
       <div className="zoom-ind">Z{zoom}</div>
-      <div className="cache-ind">Cache: {cacheSize}</div>
+      <div className="cache-ind">Cache: {tileCacheRef.current.size}</div>
       <div className="inner-shadow"></div>
       <div
         className="sleep-overlay"
