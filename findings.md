@@ -22,9 +22,9 @@
 - ~~`gpxParser.ts:60-68` builds the `distToNextTurn` array and returns it in `ParsedGpx`, but no consumer ever reads it. The navigation distance is computed independently in `mapMatcher.ts`. Dead code.~~
 - **Fix applied:** Removed `distToNextTurn` from `ParsedGpx` interface, deleted the computation, removed unused `haversine` import, and cleaned up related tests.
 
-### 1e. Elevation gain has no smoothing — GPS altitude noise inflates the number
-- `TrackStatsScreen.tsx:63-69`: raw GPS altitude deltas are summed. Consumer GPS altitude jitters by 5-20m between fixes, so this will wildly overcount elevation gain.
-- **Mitigation:** Apply a simple smoothing filter (e.g. moving average of 5 points) or a minimum delta threshold (e.g. ignore gains < 3m) before summing.
+### ~~1e. Elevation gain has no smoothing — GPS altitude noise inflates the number~~ ✅ RESOLVED
+- ~~`TrackStatsScreen.tsx:63-69`: raw GPS altitude deltas are summed. Consumer GPS altitude jitters by 5-20m between fixes, so this will wildly overcount elevation gain.~~
+- **Fix applied:** Extracted `elevationGain()` to shared `src/geo.ts` with a minimum-delta threshold (default 3m) that filters GPS noise. Only altitude changes ≥ threshold are counted; small jitter is ignored. Tests added in `geo.test.ts`.
 
 ---
 
@@ -109,5 +109,5 @@
 | **Medium** | God component in `App.tsx` | Maintenance burden, unnecessary re-renders |
 | **Medium** | No error boundary | Unrecoverable crash on bad input |
 | ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (both extracted to `geo.ts`) | ~~Divergence risk~~ |
-| **Low** | Unsmoothed elevation gain | Inaccurate stats |
+| ~~**Low**~~ | ~~Unsmoothed elevation gain~~ ✅ | ~~Inaccurate stats~~ |
 | **Low** | Unbounded SW tile cache | Storage exhaustion over time |

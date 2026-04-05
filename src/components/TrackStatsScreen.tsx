@@ -1,6 +1,6 @@
 import './TrackStatsScreen.css'
 import type { RecordedPoint } from '../types'
-import { haversine, formatDistance } from '../geo'
+import { haversine, formatDistance, elevationGain } from '../geo'
 
 interface TrackStatsScreenProps {
   walkedPath: RecordedPoint[]
@@ -43,18 +43,8 @@ export function TrackStatsScreen({ walkedPath, isTracking }: TrackStatsScreenPro
 
   const duration = last.ts - first.ts
 
-  let elevGain: number | null = null
   const hasAlt = walkedPath.some(p => p.alt !== null)
-  if (hasAlt) {
-    elevGain = 0
-    for (let i = 1; i < walkedPath.length; i++) {
-      const prev = walkedPath[i - 1]
-      const cur = walkedPath[i]
-      if (prev.alt !== null && cur.alt !== null && cur.alt > prev.alt) {
-        elevGain += cur.alt - prev.alt
-      }
-    }
-  }
+  const elevGain = hasAlt ? elevationGain(walkedPath.map(p => p.alt)) : null
 
   return (
     <div className="stats-screen">

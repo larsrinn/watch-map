@@ -11,6 +11,34 @@ export function haversine(a: [number, number], b: [number, number]): number {
 }
 
 /**
+ * Compute elevation gain from a series of altitude readings.
+ * Applies a minimum-delta threshold to filter GPS altitude noise.
+ * Points with null altitude are skipped.
+ */
+export function elevationGain(
+  altitudes: (number | null)[],
+  minDelta: number = 3,
+): number {
+  let gain = 0
+  let refAlt: number | null = null
+  for (const alt of altitudes) {
+    if (alt === null) continue
+    if (refAlt === null) {
+      refAlt = alt
+      continue
+    }
+    const delta = alt - refAlt
+    if (delta >= minDelta) {
+      gain += delta
+      refAlt = alt
+    } else if (delta <= -minDelta) {
+      refAlt = alt
+    }
+  }
+  return gain
+}
+
+/**
  * Format a distance in meters for display.
  * < 100m  → "42 m"
  * < 300m  → "0,23 km" (2 decimals)
