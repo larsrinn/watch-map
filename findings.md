@@ -75,9 +75,9 @@
 - ~~`gpxParser.ts:40-42`: `parseFloat(pt.getAttribute('lat')!)` — the `!` asserts non-null, but a malformed file without `lat`/`lon` attributes will produce `NaN` coordinates that silently propagate through the entire system.~~
 - **Fix applied:** Replaced `map` with `reduce` that filters out points where `lat` or `lon` is missing or `NaN`. Removed non-null assertions. Tests added in `gpxParser.test.ts`.
 
-### 4c. Service Worker has no cache size limit
-- `sw.js`: every fetched tile is cached forever. On a device with limited storage (a watch!), this will eventually fill the cache.
-- **Mitigation:** Add a max-entries eviction policy or a periodic cache cleanup.
+### ~~4c. Service Worker has no cache size limit~~ ✅ RESOLVED
+- ~~`sw.js`: every fetched tile is cached forever. On a device with limited storage (a watch!), this will eventually fill the cache.~~
+- **Fix applied:** Added `trimCache` eviction to `sw.js` with a 500-tile max. Eviction runs every 50 tile writes and on service worker activation. Oldest entries (by Cache API insertion order) are deleted first. Also cleans up stale tile cache versions on activate. Tests added in `sw.test.ts`.
 
 ### ~~4d. `usePosition` depends on `trackPoints` array identity for effect re-runs~~ ✅ RESOLVED
 - ~~`usePosition.ts:38,61`: `useEffect` depends on `trackPoints`. But `App.tsx:66` creates `gpxData?.trackPoints ?? []` — the fallback `[]` creates a new array on every render, restarting the GPS watcher repeatedly when no GPX is loaded.~~
@@ -110,4 +110,4 @@
 | ~~**Medium**~~ | ~~No error boundary~~ ✅ | ~~Unrecoverable crash on bad input~~ |
 | ~~**Low**~~ | ~~Duplicate `haversine`/`formatDistance`~~ ✅ (both extracted to `geo.ts`) | ~~Divergence risk~~ |
 | ~~**Low**~~ | ~~Unsmoothed elevation gain~~ ✅ | ~~Inaccurate stats~~ |
-| **Low** | Unbounded SW tile cache | Storage exhaustion over time |
+| ~~**Low**~~ | ~~Unbounded SW tile cache~~ ✅ | ~~Storage exhaustion over time~~ |
