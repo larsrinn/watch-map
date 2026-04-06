@@ -202,12 +202,12 @@ export function MapView({
           </>
         )}
         {showTrackDots && trackPtsWorld.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="6" fill="#3498db" opacity="0.7" />
+          <circle key={i} cx={p.x} cy={p.y} r="4" fill="#3498db" opacity="0.7" />
         ))}
         {showTurnDots && turns.map((t) => {
           const tp = trackPtsWorld[t.idx]
           if (!tp) return null
-          return <circle key={t.idx} cx={tp.x} cy={tp.y} r="10.5" fill="#f1c40f" stroke="#fff" strokeWidth="1" opacity="0.9" />
+          return <circle key={t.idx} cx={tp.x} cy={tp.y} r="7" fill="#f1c40f" stroke="#fff" strokeWidth="1" opacity="0.9" />
         })}
       </g>
     )
@@ -220,8 +220,8 @@ export function MapView({
 
     return (
       <g transform={`translate(${tx},${ty})`}>
-        <circle cx={p.x} cy={p.y} r="30" fill="rgba(0,120,255,0.2)" />
-        <circle cx={p.x} cy={p.y} r="15" fill="#007AFF" stroke="#fff" strokeWidth="2" />
+        <circle cx={p.x} cy={p.y} r="10" fill="rgba(0,120,255,0.2)" />
+        <circle cx={p.x} cy={p.y} r="5" fill="#007AFF" stroke="#fff" strokeWidth="2" />
       </g>
     )
   }, [center, currentPosition, zoom])
