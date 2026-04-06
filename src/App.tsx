@@ -11,6 +11,7 @@ import { useMapInteraction } from './hooks/useMapInteraction'
 import { useTrackRecording } from './hooks/useTrackRecording'
 import { useScreenNavigation } from './hooks/useScreenNavigation'
 import { useNavigation } from './hooks/useNavigation'
+import { useScreenLock } from './hooks/useScreenLock'
 
 function App() {
   const [showTrackDots, setShowTrackDots] = useState(false)
@@ -23,7 +24,9 @@ function App() {
     return () => clearInterval(timer)
   }, [])
 
-  const { currentScreen, bezelRef, goToScreen, screenCount } = useScreenNavigation()
+  const { locked, unlockProgress, handleLockPointerDown, handleLockPointerUp } = useScreenLock()
+
+  const { currentScreen, bezelRef, goToScreen, screenCount } = useScreenNavigation(locked)
 
   const {
     gpxData, gpxFileName, preloadStatus,
@@ -158,6 +161,7 @@ function App() {
               />
             </div>
           </div>
+          {locked && <div className="lock-overlay" />}
         </div>
       </div>
 
@@ -191,6 +195,18 @@ function App() {
         </Button>
         <Button variant="neutral" onClick={() => changeZoom(-1)}>
           −
+        </Button>
+        <Button
+          variant="neutral"
+          className="lock-btn"
+          style={locked && unlockProgress > 0 ? {
+            background: `linear-gradient(to right, #27ae60 ${unlockProgress * 100}%, #555 ${unlockProgress * 100}%)`,
+          } : locked ? { background: '#c0392b' } : undefined}
+          onPointerDown={handleLockPointerDown}
+          onPointerUp={handleLockPointerUp}
+          onPointerLeave={handleLockPointerUp}
+        >
+          {locked ? '🔒' : '🔓'}
         </Button>
       </div>
 

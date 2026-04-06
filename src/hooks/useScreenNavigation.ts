@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 
 const SCREEN_COUNT = 4
 
-export function useScreenNavigation() {
+export function useScreenNavigation(locked: boolean) {
   const [currentScreen, setCurrentScreen] = useState(0)
   const bezelRef = useRef<HTMLDivElement>(null)
   const swipeTouchStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -14,12 +14,13 @@ export function useScreenNavigation() {
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (locked) return
       if (e.key === 'ArrowRight') setCurrentScreen(s => Math.min(s + 1, SCREEN_COUNT - 1))
       if (e.key === 'ArrowLeft') setCurrentScreen(s => Math.max(s - 1, 0))
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [locked])
 
   // Touch swipe navigation
   useEffect(() => {
@@ -35,6 +36,7 @@ export function useScreenNavigation() {
       const dx = e.changedTouches[0].clientX - swipeTouchStartRef.current.x
       const dy = e.changedTouches[0].clientY - swipeTouchStartRef.current.y
       swipeTouchStartRef.current = null
+      if (locked) return
       if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return
       if (dx < 0) setCurrentScreen(s => Math.min(s + 1, SCREEN_COUNT - 1))
       else setCurrentScreen(s => Math.max(s - 1, 0))
@@ -46,7 +48,7 @@ export function useScreenNavigation() {
       bezel.removeEventListener('touchstart', handleTouchStart)
       bezel.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [])
+  }, [locked])
 
   return { currentScreen, bezelRef, goToScreen, screenCount: SCREEN_COUNT }
 }
