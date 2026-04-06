@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { parseGpx } from '../gpxParser'
 import type { ParsedGpx } from '../gpxParser'
 import { usePosition } from './usePosition'
@@ -48,12 +48,50 @@ export function useNavigation() {
 
   const instr = navigationState.nextTurn
   const totalRemaining = Math.round(navigationState.totalRemaining)
-  const navInstruction: NavInstruction | null = gpxData && instr ? {
-    icon: instr.icon,
-    text: instr.text,
-    distText: formatDistance(Math.round(navigationState.distanceToNextTurn ?? totalRemaining)),
-    totalDistText: formatDistance(totalRemaining),
-  } : null
+
+  // Hold passed turn instructions for 1 second so they don't disappear before the turn is made
+  const [heldTurn, setHeldTurn] = useState<{ icon: string; text: string } | null>(null)
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevNextTurnIdxRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    const currentTurnIdx = instr?.idx
+    const prevTurnIdx = prevNextTurnIdxRef.current
+
+    if (prevTurnIdx !== undefined && currentTurnIdx !== prevTurnIdx) {
+      const passedTurn = gpxData?.turns.find(t => t.idx === prevTurnIdx)
+      if (passedTurn) {
+        setHeldTurn({ icon: passedTurn.icon, text: passedTurn.text })
+        if (holdTimerRef.current) clearTimeout(holdTimerRef.current)
+        holdTimerRef.current = setTimeout(() => {
+          setHeldTurn(null)
+          holdTimerRef.current = null
+        }, 1000)
+      }
+    }
+
+    prevNextTurnIdxRef.current = currentTurnIdx
+  }, [instr?.idx, gpxData?.turns])
+
+  useEffect(() => {
+    return () => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current) }
+  }, [])
+
+  const navInstruction: NavInstruction | null = heldTurn
+    ? {
+        icon: heldTurn.icon,
+        text: heldTurn.text,
+        distText: formatDistance(0),
+        totalDistText: formatDistance(totalRemaining),
+      }
+    : gpxData && instr
+      ? {
+          icon: instr.icon,
+          text: instr.text,
+          distText: formatDistance(Math.round(navigationState.distanceToNextTurn ?? totalRemaining)),
+          totalDistText: formatDistance(totalRemaining),
+        }
+      : null
 
   const handleGpxUnload = useCallback(() => {
     preloadAbortRef.current?.abort()
