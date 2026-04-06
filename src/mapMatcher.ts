@@ -21,6 +21,7 @@ export interface NavigationState {
   nextTurn: TurnInstruction | null
   totalRemaining: number
   snappedPosition: [number, number]
+  offTrackDistance: number
 }
 
 export interface MapMatcher {
@@ -84,6 +85,7 @@ export function createMapMatcher(
         nextTurn: null,
         totalRemaining: 0,
         snappedPosition: [0, 0],
+        offTrackDistance: 0,
       }),
       reset: () => {},
     }
@@ -210,12 +212,15 @@ export function createMapMatcher(
       : null
     const totalRemaining = Math.max(0, totalRouteLength - fractionalDist)
 
+    const offTrackDistance = haversine([lat, lon], snappedPosition)
+
     return {
       currentIndex: localBestIdx,
       distanceToNextTurn,
       nextTurn,
       totalRemaining,
       snappedPosition,
+      offTrackDistance,
     }
   }
 

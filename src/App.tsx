@@ -11,11 +11,16 @@ import { useMapInteraction } from './hooks/useMapInteraction'
 import { useTrackRecording } from './hooks/useTrackRecording'
 import { useScreenNavigation } from './hooks/useScreenNavigation'
 import { useNavigation } from './hooks/useNavigation'
+import { useAlarms } from './hooks/useAlarms'
 import { useScreenLock } from './hooks/useScreenLock'
 
 function App() {
   const [showTrackDots, setShowTrackDots] = useState(false)
   const [showTurnDots, setShowTurnDots] = useState(false)
+  const [turnAlarmEnabled, setTurnAlarmEnabled] = useState(true)
+  const [offTrackAlarmEnabled, setOffTrackAlarmEnabled] = useState(true)
+  const [offTrackThreshold, setOffTrackThreshold] = useState(30)
+  const [turnAlarmTrigger, setTurnAlarmTrigger] = useState(0)
   const [currentTime, setCurrentTime] = useState(new Date())
 
   // Clock update
@@ -30,7 +35,7 @@ function App() {
 
   const {
     gpxData, gpxFileName, preloadStatus,
-    position, segmentIdx, altitude, isActive,
+    position, segmentIdx, navigationState, altitude, isActive,
     navInstruction,
     handleGpxLoad: onGpxLoad,
   } = useNavigation()
@@ -57,8 +62,17 @@ function App() {
     if (instr) {
       wakeUp(true)
       resetSleepTimer()
+      setTurnAlarmTrigger(c => c + 1)
     }
   }, [segmentIdx, gpxData?.turns, wakeUp, resetSleepTimer])
+
+  useAlarms({
+    turnAlarmEnabled,
+    offTrackAlarmEnabled,
+    offTrackThreshold,
+    offTrackDistance: navigationState.offTrackDistance,
+    turnAlarmTrigger,
+  })
 
   // Sleep timer
   useEffect(() => {
@@ -158,6 +172,12 @@ function App() {
                 showTurnDots={showTurnDots}
                 onToggleTrackDots={() => setShowTrackDots(v => !v)}
                 onToggleTurnDots={() => setShowTurnDots(v => !v)}
+                turnAlarmEnabled={turnAlarmEnabled}
+                offTrackAlarmEnabled={offTrackAlarmEnabled}
+                offTrackThreshold={offTrackThreshold}
+                onToggleTurnAlarm={() => setTurnAlarmEnabled(v => !v)}
+                onToggleOffTrackAlarm={() => setOffTrackAlarmEnabled(v => !v)}
+                onChangeOffTrackThreshold={(v) => setOffTrackThreshold(Math.max(10, Math.min(100, v)))}
               />
             </div>
           </div>
