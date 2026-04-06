@@ -38,6 +38,7 @@ function App() {
     position, segmentIdx, navigationState, altitude, isActive,
     navInstruction,
     handleGpxLoad: onGpxLoad,
+    setManualPosition,
   } = useNavigation()
 
   const { sleeping, haptic, wakeUp, resetSleepTimer } = useSleepWake(isActive)
@@ -157,6 +158,7 @@ function App() {
                   showTrackDots={showTrackDots}
                   showTurnDots={showTurnDots}
                   turns={gpxData?.turns ?? []}
+                  onSetManualPosition={import.meta.env.DEV ? setManualPosition : undefined}
                 />
               </ErrorBoundary>
             </div>

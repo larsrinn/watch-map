@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createMapMatcher, DEFAULT_CONFIG } from '../mapMatcher'
 import type { MapMatcher, NavigationState } from '../mapMatcher'
 import type { TurnInstruction } from '../gpxParser'
@@ -18,10 +18,12 @@ export function usePosition(
   navigationState: NavigationState
   altitude: number | null
   isActive: boolean
+  setManualPosition: (lat: number, lon: number) => void
 } {
   const [gpsPosition, setGpsPosition] = useState<[number, number] | null>(null)
   const [gpsAltitude, setGpsAltitude] = useState<number | null>(null)
   const [hasGpsFix, setHasGpsFix] = useState(false)
+  const [manualPosition, setManualPositionState] = useState<[number, number] | null>(null)
   const [navigationState, setNavigationState] = useState<NavigationState>(
     () => makeInitialNavState(trackPoints, turns)
   )
@@ -37,6 +39,21 @@ export function usePosition(
     }
   }, [trackPoints, turns])
 
+  const setManualPosition = useCallback((lat: number, lon: number) => {
+    const p: [number, number] = [lat, lon]
+    setManualPositionState(p)
+    console.log('[Position] Manual position set:', { lat, lon })
+    if (matcherRef.current) {
+      const navState = matcherRef.current.updatePosition(lat, lon)
+      setNavigationState(navState)
+      console.log('[Position] Navigation state after manual update:', {
+        currentIndex: navState.currentIndex,
+        offTrackDistance: Math.round(navState.offTrackDistance),
+        totalRemaining: Math.round(navState.totalRemaining),
+      })
+    }
+  }, [])
+
   // GPS tracking
   useEffect(() => {
     if (!navigator.geolocation) return
@@ -47,6 +64,10 @@ export function usePosition(
         setGpsPosition(p)
         setGpsAltitude(pos.coords.altitude)
         setHasGpsFix(true)
+        if (manualPosition) {
+          console.log('[Position] GPS update ignored (manual position active)')
+          return
+        }
         if (matcherRef.current) {
           setNavigationState(matcherRef.current.updatePosition(p[0], p[1]))
         }
@@ -58,13 +79,16 @@ export function usePosition(
     )
 
     return () => navigator.geolocation.clearWatch(watchId)
-  }, [])
+  }, [manualPosition])
+
+  const effectivePosition = manualPosition ?? gpsPosition ?? (trackPoints[0] ?? [0, 0])
 
   return {
-    position: gpsPosition ?? (trackPoints[0] ?? [0, 0]),
+    position: effectivePosition,
     segmentIdx: navigationState.currentIndex,
     navigationState,
     altitude: gpsAltitude,
-    isActive: hasGpsFix,
+    isActive: hasGpsFix || manualPosition !== null,
+    setManualPosition,
   }
 }

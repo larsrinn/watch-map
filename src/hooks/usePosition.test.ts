@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest'
 const source = (await import('./usePosition.ts?raw')).default
 
 describe('usePosition GPS watcher stability', () => {
-  it('GPS tracking effect should have empty dependency array', () => {
+  it('GPS tracking effect should depend only on manualPosition', () => {
     const watchBlock = source.indexOf('watchPosition')
     expect(watchBlock).toBeGreaterThan(-1)
 
@@ -16,7 +16,7 @@ describe('usePosition GPS watcher stability', () => {
     expect(clearWatchIdx).toBeGreaterThan(-1)
 
     const afterClearWatch = afterWatch.slice(clearWatchIdx)
-    const depsMatch = afterClearWatch.match(/\},\s*\[\]\)/)
+    const depsMatch = afterClearWatch.match(/\},\s*\[manualPosition\]\)/)
     expect(depsMatch).not.toBeNull()
   })
 

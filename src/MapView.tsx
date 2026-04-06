@@ -111,6 +111,14 @@ export const TileLayer = memo(function TileLayer({ zoom, center }: TileLayerProp
   return <Fragment key={renderKey}>{tiles}</Fragment>
 })
 
+// Inverse of latLonPx: convert world pixel coordinates back to lat/lon
+function pxToLatLon(px: number, py: number, z: number): [number, number] {
+  const lon = (px / TILE_SIZE) / (1 << z) * 360 - 180
+  const n = Math.PI - (2 * Math.PI * (py / TILE_SIZE)) / (1 << z)
+  const lat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
+  return [lat, lon]
+}
+
 interface MapViewProps {
   zoom: number
   currentPosition: [number, number]
@@ -126,6 +134,7 @@ interface MapViewProps {
   showTrackDots: boolean
   showTurnDots: boolean
   turns: TurnInstruction[]
+  onSetManualPosition?: (lat: number, lon: number) => void
 }
 
 export function MapView({
@@ -143,8 +152,23 @@ export function MapView({
   showTrackDots,
   showTurnDots,
   turns,
+  onSetManualPosition,
 }: MapViewProps) {
   const center = getCenter(currentPosition, zoom, followMode, offsetX, offsetY)
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!onSetManualPosition) return
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const clickY = e.clientY - rect.top
+    // Convert screen pixel to world pixel, then to lat/lon
+    const worldX = center.x + (clickX - HALF)
+    const worldY = center.y + (clickY - HALF)
+    const [lat, lon] = pxToLatLon(worldX, worldY, zoom)
+    console.log('[MapView] Right-click → manual position:', { lat: lat.toFixed(6), lon: lon.toFixed(6) })
+    onSetManualPosition(lat, lon)
+  }, [center, zoom, onSetManualPosition])
 
   // Memoize world-pixel projections — only recompute when zoom or data changes, not on every position update
   const trackPathD = useMemo(() => {
@@ -204,7 +228,7 @@ export function MapView({
   }, [center, currentPosition, zoom])
 
   return (
-    <>
+    <div onContextMenu={onSetManualPosition ? handleContextMenu : undefined} style={{ width: '100%', height: '100%' }}>
       <div id="tiles">{!sleeping && <TileLayer zoom={zoom} center={center} />}</div>
       <svg className="track-svg" xmlns="http://www.w3.org/2000/svg">
         {!sleeping && renderTrack()}
@@ -242,6 +266,6 @@ export function MapView({
           </>
         )}
       </div>
-    </>
+    </div>
   )
 }

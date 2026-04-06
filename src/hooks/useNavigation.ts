@@ -24,7 +24,7 @@ export function useNavigation() {
 
   const trackPoints = gpxData?.trackPoints ?? EMPTY_TRACK_POINTS
   const turns = gpxData?.turns ?? EMPTY_TURNS
-  const { position, segmentIdx, navigationState, altitude, isActive } = usePosition(trackPoints, turns)
+  const { position, segmentIdx, navigationState, altitude, isActive, setManualPosition } = usePosition(trackPoints, turns)
 
   const handleGpxLoad = useCallback((content: string, fileName: string) => {
     const parsed = parseGpx(content)
@@ -62,5 +62,6 @@ export function useNavigation() {
     position, segmentIdx, navigationState, altitude, isActive,
     navInstruction,
     handleGpxLoad,
+    setManualPosition,
   }
 }

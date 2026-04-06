@@ -25,7 +25,10 @@ export function useAlarms({
       mountedRef.current = true
       return
     }
-    if (turnAlarmEnabled) playTurnBeep()
+    if (turnAlarmEnabled) {
+      console.log('[Alarm] Turn alarm triggered')
+      playTurnBeep()
+    }
   }, [turnAlarmTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Off-track alarm ---
@@ -42,9 +45,19 @@ export function useAlarms({
       isOffTrackRef.current = true
       if (!wasOffTrackRef.current) {
         wasOffTrackRef.current = true
+        console.log('[Alarm] OFF-TRACK alarm triggered!', {
+          distance: Math.round(offTrackDistance) + 'm',
+          threshold: offTrackThreshold + 'm',
+        })
         playOffTrackBeep()
       }
     } else if (offTrackDistance <= offTrackThreshold * HYSTERESIS_FACTOR) {
+      if (wasOffTrackRef.current) {
+        console.log('[Alarm] Back on track — off-track alarm cleared', {
+          distance: Math.round(offTrackDistance) + 'm',
+          clearThreshold: Math.round(offTrackThreshold * HYSTERESIS_FACTOR) + 'm',
+        })
+      }
       wasOffTrackRef.current = false
       isOffTrackRef.current = false
     }
