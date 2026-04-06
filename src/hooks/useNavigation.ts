@@ -47,12 +47,11 @@ export function useNavigation() {
   }, [])
 
   const instr = navigationState.nextTurn
-  const distanceToNext = Math.round(navigationState.distanceToNextTurn ?? navigationState.totalRemaining)
   const totalRemaining = Math.round(navigationState.totalRemaining)
-  const navInstruction: NavInstruction | null = gpxData ? {
-    icon: instr?.icon ?? '↑',
-    text: instr?.text ?? '',
-    distText: formatDistance(distanceToNext),
+  const navInstruction: NavInstruction | null = gpxData && instr ? {
+    icon: instr.icon,
+    text: instr.text,
+    distText: formatDistance(Math.round(navigationState.distanceToNextTurn ?? totalRemaining)),
     totalDistText: formatDistance(totalRemaining),
   } : null
 
