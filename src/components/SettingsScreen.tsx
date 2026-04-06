@@ -11,12 +11,15 @@ interface SettingsScreenProps {
   onToggleTurnAlarm: () => void
   onToggleOffTrackAlarm: () => void
   onChangeOffTrackThreshold: (value: number) => void
+  showInstructions: boolean
+  onToggleInstructions: () => void
 }
 
 export function SettingsScreen({
   showTrackDots, showTurnDots, onToggleTrackDots, onToggleTurnDots,
   turnAlarmEnabled, offTrackAlarmEnabled, offTrackThreshold,
   onToggleTurnAlarm, onToggleOffTrackAlarm, onChangeOffTrackThreshold,
+  showInstructions, onToggleInstructions,
 }: SettingsScreenProps) {
   return (
     <div className="settings-screen">
@@ -43,6 +46,18 @@ export function SettingsScreen({
           onClick={onToggleTurnDots}
         >
           {showTurnDots ? 'AN' : 'AUS'}
+        </button>
+      </div>
+      <div className="settings-row">
+        <div className="settings-label">
+          <span className="settings-dot settings-dot-orange" />
+          Anweisungen
+        </div>
+        <button
+          className={`settings-toggle ${showInstructions ? 'settings-toggle-on' : ''}`}
+          onClick={onToggleInstructions}
+        >
+          {showInstructions ? 'AN' : 'AUS'}
         </button>
       </div>
       <div className="settings-row">

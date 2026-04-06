@@ -14,13 +14,10 @@ import { useScreenNavigation } from './hooks/useScreenNavigation'
 import { useNavigation } from './hooks/useNavigation'
 import { useAlarms } from './hooks/useAlarms'
 import { useScreenLock } from './hooks/useScreenLock'
+import { useSettings } from './hooks/useSettings'
 
 function App() {
-  const [showTrackDots, setShowTrackDots] = useState(false)
-  const [showTurnDots, setShowTurnDots] = useState(false)
-  const [turnAlarmEnabled, setTurnAlarmEnabled] = useState(true)
-  const [offTrackAlarmEnabled, setOffTrackAlarmEnabled] = useState(true)
-  const [offTrackThreshold, setOffTrackThreshold] = useState(30)
+  const { settings, update, toggle } = useSettings()
   const [turnAlarmTrigger, setTurnAlarmTrigger] = useState(0)
   const [currentTime, setCurrentTime] = useState(new Date())
 
@@ -70,9 +67,9 @@ function App() {
   }, [segmentIdx, gpxData?.turns, wakeUp, resetSleepTimer])
 
   useAlarms({
-    turnAlarmEnabled,
-    offTrackAlarmEnabled,
-    offTrackThreshold,
+    turnAlarmEnabled: settings.turnAlarmEnabled,
+    offTrackAlarmEnabled: settings.offTrackAlarmEnabled,
+    offTrackThreshold: settings.offTrackThreshold,
     offTrackDistance: navigationState.offTrackDistance,
     turnAlarmTrigger,
   })
@@ -157,9 +154,9 @@ function App() {
                   sleeping={sleeping}
                   onSleepClick={handleSleepClick}
                   currentTime={currentTime}
-                  navInstruction={navInstruction}
-                  showTrackDots={showTrackDots}
-                  showTurnDots={showTurnDots}
+                  navInstruction={settings.showInstructions ? navInstruction : null}
+                  showTrackDots={settings.showTrackDots}
+                  showTurnDots={settings.showTurnDots}
                   turns={gpxData?.turns ?? []}
                   onSetManualPosition={import.meta.env.DEV ? setManualPosition : undefined}
                 />
@@ -173,16 +170,18 @@ function App() {
             </div>
             <div className="screen-slide">
               <SettingsScreen
-                showTrackDots={showTrackDots}
-                showTurnDots={showTurnDots}
-                onToggleTrackDots={() => setShowTrackDots(v => !v)}
-                onToggleTurnDots={() => setShowTurnDots(v => !v)}
-                turnAlarmEnabled={turnAlarmEnabled}
-                offTrackAlarmEnabled={offTrackAlarmEnabled}
-                offTrackThreshold={offTrackThreshold}
-                onToggleTurnAlarm={() => setTurnAlarmEnabled(v => !v)}
-                onToggleOffTrackAlarm={() => setOffTrackAlarmEnabled(v => !v)}
-                onChangeOffTrackThreshold={(v) => setOffTrackThreshold(Math.max(10, Math.min(100, v)))}
+                showTrackDots={settings.showTrackDots}
+                showTurnDots={settings.showTurnDots}
+                onToggleTrackDots={() => toggle('showTrackDots')}
+                onToggleTurnDots={() => toggle('showTurnDots')}
+                turnAlarmEnabled={settings.turnAlarmEnabled}
+                offTrackAlarmEnabled={settings.offTrackAlarmEnabled}
+                offTrackThreshold={settings.offTrackThreshold}
+                onToggleTurnAlarm={() => toggle('turnAlarmEnabled')}
+                onToggleOffTrackAlarm={() => toggle('offTrackAlarmEnabled')}
+                onChangeOffTrackThreshold={(v) => update('offTrackThreshold', Math.max(10, Math.min(100, v)))}
+                showInstructions={settings.showInstructions}
+                onToggleInstructions={() => toggle('showInstructions')}
               />
             </div>
           </div>
