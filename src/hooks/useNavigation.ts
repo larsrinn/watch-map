@@ -56,12 +56,20 @@ export function useNavigation() {
     totalDistText: formatDistance(totalRemaining),
   } : null
 
+  const handleGpxUnload = useCallback(() => {
+    preloadAbortRef.current?.abort()
+    setGpxData(null)
+    setGpxFileName('')
+    setPreloadStatus({ phase: 'idle' })
+  }, [])
+
   return {
     gpxData, gpxFileName, preloadStatus,
     trackPoints, turns,
     position, segmentIdx, navigationState, altitude, isActive,
     navInstruction,
     handleGpxLoad,
+    handleGpxUnload,
     setManualPosition,
   }
 }

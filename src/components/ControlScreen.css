@@ -11,6 +11,14 @@
   color: #fff;
 }
 
+.screen-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ccc;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
 .control-screen--has-track {
   gap: 5px;
 }

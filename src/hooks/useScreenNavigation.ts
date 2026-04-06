@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-const SCREEN_COUNT = 4
+const SCREEN_COUNT = 5
 
 export function useScreenNavigation(locked: boolean) {
   const [currentScreen, setCurrentScreen] = useState(0)

@@ -166,7 +166,6 @@ export function MapView({
     const worldX = center.x + (clickX - HALF)
     const worldY = center.y + (clickY - HALF)
     const [lat, lon] = pxToLatLon(worldX, worldY, zoom)
-    console.log('[MapView] Right-click → manual position:', { lat: lat.toFixed(6), lon: lon.toFixed(6) })
     onSetManualPosition(lat, lon)
   }, [center, zoom, onSetManualPosition])
 

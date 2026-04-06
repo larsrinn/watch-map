@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
 import { MapView } from './MapView'
-import { ControlScreen } from './components/ControlScreen'
+import { RouteScreen } from './components/RouteScreen'
+import { RecordingScreen } from './components/RecordingScreen'
 import { TrackStatsScreen } from './components/TrackStatsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -37,7 +38,8 @@ function App() {
     gpxData, gpxFileName, preloadStatus,
     position, segmentIdx, navigationState, altitude, isActive,
     navInstruction,
-    handleGpxLoad: onGpxLoad,
+    handleGpxLoad,
+    handleGpxUnload,
     setManualPosition,
   } = useNavigation()
 
@@ -107,18 +109,13 @@ function App() {
 
   const handleSleepClick = () => wakeUp(false)
 
-  const handleGpxLoad = (content: string, fileName: string) => {
-    onGpxLoad(content, fileName)
-    handleClear()
-  }
-
   return (
     <div className="app-container">
       <div className="bezel" ref={bezelRef}>
         <div
-          className={`watch ${haptic ? 'haptic' : ''} ${currentScreen === 1 ? 'map-active' : ''} ${currentScreen === 1 && sleeping ? 'sleeping' : ''}`}
-          onWheel={currentScreen === 1 ? handleWheel : undefined}
-          onPointerDown={currentScreen === 1 ? handlePointerDown : undefined}
+          className={`watch ${haptic ? 'haptic' : ''} ${currentScreen === 2 ? 'map-active' : ''} ${currentScreen === 2 && sleeping ? 'sleeping' : ''}`}
+          onWheel={currentScreen === 2 ? handleWheel : undefined}
+          onPointerDown={currentScreen === 2 ? handlePointerDown : undefined}
         >
           <div
             className="screen-strip"
@@ -128,17 +125,23 @@ function App() {
             }}
           >
             <div className="screen-slide">
-              <ControlScreen
+              <RouteScreen
                 gpxFileName={gpxFileName}
+                hasGpx={gpxData !== null}
+                onGpxLoad={handleGpxLoad}
+                onGpxUnload={handleGpxUnload}
+                preloadStatus={preloadStatus}
+              />
+            </div>
+            <div className="screen-slide">
+              <RecordingScreen
                 isTracking={isTracking}
                 hasTrack={recordedPath.length > 0}
-                onGpxLoad={handleGpxLoad}
-                onStartTrack={() => handleStartTrack(() => goToScreen(1))}
-                onContinueTrack={() => handleContinueTrack(() => goToScreen(1))}
+                onStartTrack={() => handleStartTrack(() => goToScreen(2))}
+                onContinueTrack={() => handleContinueTrack(() => goToScreen(2))}
                 onStop={handleStop}
                 onClear={handleClear}
                 onExportGpx={handleExportGpx}
-                preloadStatus={preloadStatus}
               />
             </div>
             <div className="screen-slide">

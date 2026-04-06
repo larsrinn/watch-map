@@ -45,18 +45,12 @@ export function useAlarms({
       isOffTrackRef.current = true
       if (!wasOffTrackRef.current) {
         wasOffTrackRef.current = true
-        console.log('[Alarm] OFF-TRACK alarm triggered!', {
-          distance: Math.round(offTrackDistance) + 'm',
-          threshold: offTrackThreshold + 'm',
-        })
+        console.log('[Alarm] Off-track alarm triggered')
         playOffTrackBeep()
       }
     } else if (offTrackDistance <= offTrackThreshold * HYSTERESIS_FACTOR) {
       if (wasOffTrackRef.current) {
-        console.log('[Alarm] Back on track — off-track alarm cleared', {
-          distance: Math.round(offTrackDistance) + 'm',
-          clearThreshold: Math.round(offTrackThreshold * HYSTERESIS_FACTOR) + 'm',
-        })
+        console.log('[Alarm] Off-track alarm cleared')
       }
       wasOffTrackRef.current = false
       isOffTrackRef.current = false

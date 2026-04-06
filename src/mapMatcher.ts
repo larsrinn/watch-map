@@ -117,8 +117,6 @@ export function createMapMatcher(
     return haversine([lat, lon], trackPoints[ptIdx])
   }
 
-  let prevIndex = 0
-
   function updatePosition(lat: number, lon: number): NavigationState {
     const curDist = cumulativeDist[currentIndex]
 
@@ -169,14 +167,7 @@ export function createMapMatcher(
         jumpCandidateIndex = globalBestIdx
         jumpConfirmCount = 1
       }
-      console.log('[MapMatcher] Jump candidate:', {
-        from: currentIndex,
-        to: globalBestIdx,
-        confirmCount: jumpConfirmCount,
-        needed: cfg.jumpConfirmFixes,
-        globalDist: Math.round(globalBestDist),
-        localDist: Math.round(localBestDist),
-      })
+      console.log('[MapMatcher] Jump candidate:', currentIndex, '→', globalBestIdx, `(${jumpConfirmCount}/${cfg.jumpConfirmFixes})`)
       if (jumpConfirmCount >= cfg.jumpConfirmFixes) {
         console.log('[MapMatcher] Jump confirmed! Moving from track point', currentIndex, '→', globalBestIdx)
         currentIndex = globalBestIdx
@@ -225,14 +216,6 @@ export function createMapMatcher(
     const totalRemaining = Math.max(0, totalRouteLength - fractionalDist)
 
     const offTrackDistance = haversine([lat, lon], snappedPosition)
-
-    if (localBestIdx !== prevIndex) {
-      console.log('[MapMatcher] Track point changed:', prevIndex, '→', localBestIdx,
-        '| offTrack:', Math.round(offTrackDistance) + 'm',
-        '| remaining:', Math.round(totalRemaining) + 'm',
-        nextTurn ? `| next turn: "${nextTurn.text}" in ${Math.round(distanceToNextTurn ?? 0)}m` : '| no upcoming turn')
-      prevIndex = localBestIdx
-    }
 
     return {
       currentIndex: localBestIdx,

@@ -30,6 +30,18 @@ export function usePosition(
 
   const matcherRef = useRef<MapMatcher | null>(null)
 
+  function logNavUpdate(navState: NavigationState) {
+    const parts = [
+      `[Nav] trackPt:${navState.currentIndex}`,
+      `offTrack:${Math.round(navState.offTrackDistance)}m`,
+      `remaining:${Math.round(navState.totalRemaining)}m`,
+    ]
+    if (navState.nextTurn && navState.distanceToNextTurn != null) {
+      parts.push(`next:"${navState.nextTurn.text}" in ${Math.round(navState.distanceToNextTurn)}m`)
+    }
+    console.log(parts.join(' | '))
+  }
+
   // Recreate map matcher when track changes
   useEffect(() => {
     const m = createMapMatcher(trackPoints, turns, DEFAULT_CONFIG)
@@ -42,15 +54,10 @@ export function usePosition(
   const setManualPosition = useCallback((lat: number, lon: number) => {
     const p: [number, number] = [lat, lon]
     setManualPositionState(p)
-    console.log('[Position] Manual position set:', { lat, lon })
     if (matcherRef.current) {
       const navState = matcherRef.current.updatePosition(lat, lon)
       setNavigationState(navState)
-      console.log('[Position] Navigation state after manual update:', {
-        currentIndex: navState.currentIndex,
-        offTrackDistance: Math.round(navState.offTrackDistance),
-        totalRemaining: Math.round(navState.totalRemaining),
-      })
+      logNavUpdate(navState)
     }
   }, [])
 
@@ -64,12 +71,11 @@ export function usePosition(
         setGpsPosition(p)
         setGpsAltitude(pos.coords.altitude)
         setHasGpsFix(true)
-        if (manualPosition) {
-          console.log('[Position] GPS update ignored (manual position active)')
-          return
-        }
+        if (manualPosition) return
         if (matcherRef.current) {
-          setNavigationState(matcherRef.current.updatePosition(p[0], p[1]))
+          const navState = matcherRef.current.updatePosition(p[0], p[1])
+          setNavigationState(navState)
+          logNavUpdate(navState)
         }
       },
       () => {
