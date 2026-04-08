@@ -248,10 +248,9 @@ export function MapView({
         </div>
       )}
       <div className="zoom-ind">Z{zoom}</div>
-      {isOffTrack && <div className="off-track-overlay" />}
       <div className="inner-shadow"></div>
       <div
-        className="sleep-overlay"
+        className={`sleep-overlay ${isOffTrack ? 'off-track' : ''}`}
         style={{ opacity: sleeping ? 1 : 0, pointerEvents: sleeping ? 'auto' : 'none' }}
         onClick={onSleepClick}
       >
