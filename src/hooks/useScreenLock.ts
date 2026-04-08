@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-const UNLOCK_DURATION = 2000
+const UNLOCK_DURATION = 1000
 
 export function useScreenLock() {
   const [locked, setLocked] = useState(false)
