@@ -15,6 +15,7 @@ import { useNavigation } from './hooks/useNavigation'
 import { useAlarms } from './hooks/useAlarms'
 import { useScreenLock } from './hooks/useScreenLock'
 import { useSettings } from './hooks/useSettings'
+import { useApproachAlert } from './hooks/useApproachAlert'
 
 function App() {
   const { settings, update, toggle } = useSettings()
@@ -40,7 +41,7 @@ function App() {
     setManualPosition,
   } = useNavigation()
 
-  const { sleeping, haptic, wakeUp, resetSleepTimer } = useSleepWake(isActive)
+  const { sleeping, haptic, wakeUp, resetSleepTimer, clearSleepTimer } = useSleepWake(isActive)
 
   const {
     zoom, followMode, setFollowMode, offsetX, offsetY,
@@ -74,10 +75,24 @@ function App() {
     turnAlarmTrigger,
   })
 
-  // Sleep timer
+  const { approaching } = useApproachAlert({
+    distanceToNextTurn: navigationState.distanceToNextTurn,
+    nextTurnIdx: navigationState.nextTurn?.idx,
+    approachAlertFar: settings.approachAlertFar,
+    approachAlertNear: settings.approachAlertNear,
+    turnAlarmEnabled: settings.turnAlarmEnabled,
+    wakeUp,
+    resetSleepTimer,
+  })
+
+  // Sleep timer — suppress when approaching a turn
   useEffect(() => {
-    resetSleepTimer()
-  }, [resetSleepTimer])
+    if (approaching) {
+      clearSleepTimer()
+    } else {
+      resetSleepTimer()
+    }
+  }, [approaching, clearSleepTimer, resetSleepTimer])
 
   // Screen Wake Lock — prevent phone screen from locking while tracking
   useEffect(() => {

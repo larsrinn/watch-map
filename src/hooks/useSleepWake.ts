@@ -28,5 +28,12 @@ export function useSleepWake(isActive: boolean) {
     }
   }, [isActive, goToSleep])
 
-  return { sleeping, haptic, wakeUp, resetSleepTimer }
+  const clearSleepTimer = useCallback(() => {
+    if (sleepTimerRef.current) {
+      clearTimeout(sleepTimerRef.current)
+      sleepTimerRef.current = null
+    }
+  }, [])
+
+  return { sleeping, haptic, wakeUp, resetSleepTimer, clearSleepTimer }
 }

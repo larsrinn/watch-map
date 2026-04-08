@@ -7,6 +7,8 @@ interface Settings {
   offTrackAlarmEnabled: boolean
   offTrackThreshold: number
   showInstructions: boolean
+  approachAlertFar: number
+  approachAlertNear: number
 }
 
 const STORAGE_KEY = 'watch-nav-settings'
@@ -18,6 +20,8 @@ const DEFAULTS: Settings = {
   offTrackAlarmEnabled: true,
   offTrackThreshold: 30,
   showInstructions: true,
+  approachAlertFar: 200,
+  approachAlertNear: 20,
 }
 
 function loadSettings(): Settings {
