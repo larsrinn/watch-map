@@ -44,6 +44,11 @@
   border-color: #FF4500;
 }
 
+.watch.off-track {
+  border-color: #e74c3c;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
+}
+
 .watch.map-active {
   cursor: grab;
 }
@@ -213,6 +218,17 @@
   font-weight: 700;
   letter-spacing: -1px;
   line-height: 1.1;
+}
+
+.off-track-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(231, 76, 60, 0.45);
+  z-index: 15;
+  pointer-events: none;
 }
 
 .lock-overlay {

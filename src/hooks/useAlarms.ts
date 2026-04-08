@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { playTurnBeep, playOffTrackBeep } from '../audio'
 
 interface UseAlarmsOptions {
@@ -33,16 +33,16 @@ export function useAlarms({
 
   // --- Off-track alarm ---
   const wasOffTrackRef = useRef(false)
-  const isOffTrackRef = useRef(false)
+  const [isOffTrack, setIsOffTrack] = useState(false)
 
   useEffect(() => {
     if (!offTrackAlarmEnabled) {
       wasOffTrackRef.current = false
-      isOffTrackRef.current = false
+      setIsOffTrack(false)
       return
     }
     if (offTrackDistance > offTrackThreshold) {
-      isOffTrackRef.current = true
+      setIsOffTrack(true)
       if (!wasOffTrackRef.current) {
         wasOffTrackRef.current = true
         console.log('[Alarm] Off-track alarm triggered')
@@ -53,9 +53,9 @@ export function useAlarms({
         console.log('[Alarm] Off-track alarm cleared')
       }
       wasOffTrackRef.current = false
-      isOffTrackRef.current = false
+      setIsOffTrack(false)
     }
   }, [offTrackDistance, offTrackAlarmEnabled, offTrackThreshold])
 
-  return { isOffTrack: isOffTrackRef.current }
+  return { isOffTrack }
 }

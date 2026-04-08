@@ -66,7 +66,7 @@ function App() {
     }
   }, [segmentIdx, gpxData?.turns, wakeUp, resetSleepTimer])
 
-  useAlarms({
+  const { isOffTrack } = useAlarms({
     turnAlarmEnabled: settings.turnAlarmEnabled,
     offTrackAlarmEnabled: settings.offTrackAlarmEnabled,
     offTrackThreshold: settings.offTrackThreshold,
@@ -110,7 +110,7 @@ function App() {
     <div className="app-container">
       <div className="bezel" ref={bezelRef}>
         <div
-          className={`watch ${haptic ? 'haptic' : ''} ${currentScreen === 2 ? 'map-active' : ''} ${currentScreen === 2 && sleeping ? 'sleeping' : ''}`}
+          className={`watch ${haptic ? 'haptic' : ''} ${currentScreen === 2 ? 'map-active' : ''} ${currentScreen === 2 && sleeping ? 'sleeping' : ''} ${isOffTrack ? 'off-track' : ''}`}
           onWheel={currentScreen === 2 ? handleWheel : undefined}
           onPointerDown={currentScreen === 2 ? handlePointerDown : undefined}
         >
@@ -154,7 +154,8 @@ function App() {
                   sleeping={sleeping}
                   onSleepClick={handleSleepClick}
                   currentTime={currentTime}
-                  navInstruction={settings.showInstructions ? navInstruction : null}
+                  navInstruction={settings.showInstructions && !isOffTrack ? navInstruction : null}
+                  isOffTrack={isOffTrack}
                   showTrackDots={settings.showTrackDots}
                   showTurnDots={settings.showTurnDots}
                   turns={gpxData?.turns ?? []}

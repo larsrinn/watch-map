@@ -134,6 +134,7 @@ interface MapViewProps {
   showTrackDots: boolean
   showTurnDots: boolean
   turns: TurnInstruction[]
+  isOffTrack: boolean
   onSetManualPosition?: (lat: number, lon: number) => void
 }
 
@@ -152,6 +153,7 @@ export function MapView({
   showTrackDots,
   showTurnDots,
   turns,
+  isOffTrack,
   onSetManualPosition,
 }: MapViewProps) {
   const center = getCenter(currentPosition, zoom, followMode, offsetX, offsetY)
@@ -246,6 +248,7 @@ export function MapView({
         </div>
       )}
       <div className="zoom-ind">Z{zoom}</div>
+      {isOffTrack && <div className="off-track-overlay" />}
       <div className="inner-shadow"></div>
       <div
         className="sleep-overlay"
